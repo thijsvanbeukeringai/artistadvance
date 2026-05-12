@@ -143,9 +143,11 @@ const EVENT_LABELS: Record<string, string> = {
   other: "Anders",
 };
 
-const fmtTime = (iso?: string) => iso ? new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }) : "-";
-const fmtDateShort = (iso?: string) => iso ? new Date(iso).toLocaleDateString("nl-NL", { day: "2-digit", month: "short" }) : "-";
-const fmtDateLong = (iso?: string) => iso ? new Date(iso).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" }) : "-";
+// Force Europe/Amsterdam zodat PDF (server-side, Vercel = UTC) en UI (client-side, browser-TZ) dezelfde tijd tonen
+const TZ = "Europe/Amsterdam";
+const fmtTime = (iso?: string) => iso ? new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: TZ }) : "-";
+const fmtDateShort = (iso?: string) => iso ? new Date(iso).toLocaleDateString("nl-NL", { day: "2-digit", month: "short", timeZone: TZ }) : "-";
+const fmtDateLong = (iso?: string) => iso ? new Date(iso).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric", timeZone: TZ }) : "-";
 
 const STATUS_PILL: Record<string, any> = {
   complete: s.pillOk,        locked: s.pillOk,
@@ -261,8 +263,8 @@ export function CallsheetPDF({ detail, timeline }: { detail: AdvancingDetail; ti
                 return (
                   <View key={ev.id} style={[s.rosRow, i % 2 === 1 ? s.rosRowAlt : {}]}>
                     <View style={s.rosTime}>
-                      <Text style={s.rosTimeBig}>{dt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</Text>
-                      <Text style={s.rosDate}>{dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "short" })}</Text>
+                      <Text style={s.rosTimeBig}>{dt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: TZ })}</Text>
+                      <Text style={s.rosDate}>{dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", timeZone: TZ })}</Text>
                     </View>
                     <Text style={s.rosLabel}>{EVENT_LABELS[ev.event_type] ?? ev.event_type}</Text>
                     <Text style={s.rosLoc}>{ev.location ?? "-"}</Text>

@@ -95,7 +95,7 @@ function FlightRow({ flight, bookingId }: { flight: FlightInfo; bookingId: strin
             <span className="text-xs text-ink-500">{flight.departure_airport} → {flight.arrival_airport}</span>
           </div>
           <div className="text-[11px] text-ink-500 mt-1 tabular-nums">
-            Vertrek {new Date(flight.departure_datetime).toLocaleString("nl-NL")} · Aankomst {new Date(flight.arrival_datetime).toLocaleString("nl-NL")}
+            Vertrek {new Date(flight.departure_datetime).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })} · Aankomst {new Date(flight.arrival_datetime).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}
           </div>
           {flight.passengers.length > 0 && (
             <div className="text-[11px] text-ink-500 mt-0.5">Passagiers: {flight.passengers.join(", ")}</div>

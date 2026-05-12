@@ -147,8 +147,9 @@ function TimelineRow({
 }) {
   const [pending, start] = useTransition();
   const dt = new Date(event.datetime);
-  const dateStr = dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "short" });
-  const timeStr = dt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+  // Force Europe/Amsterdam zodat UI en PDF dezelfde tijd tonen
+  const dateStr = dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", timeZone: "Europe/Amsterdam" });
+  const timeStr = dt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 
   return (
     <li className={`relative pl-16 pr-5 py-4 hover:bg-ink-50/40 transition ${pending ? "opacity-50" : ""}`}>

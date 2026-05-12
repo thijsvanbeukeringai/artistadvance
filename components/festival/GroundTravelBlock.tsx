@@ -27,7 +27,8 @@ const STATUS_TONE: Record<string, string> = {
 function fmtDateTime(iso?: string) {
   if (!iso) return "-";
   const d = new Date(iso);
-  return `${d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short" })} ${d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
+  const TZ = "Europe/Amsterdam";
+  return `${d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", timeZone: TZ })} ${d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: TZ })}`;
 }
 function fmtDateTimeLocal(iso?: string) {
   if (!iso) return "";

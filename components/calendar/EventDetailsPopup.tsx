@@ -24,13 +24,14 @@ const HEADER_LABEL: Record<CalEvent["type"], string> = {
   reminder: "Reminder",
 };
 
+const TZ = "Europe/Amsterdam";
 function fmtDate(iso?: string) {
   if (!iso) return "-";
-  return new Date(iso).toLocaleDateString("nl-NL", { weekday: "short", day: "2-digit", month: "long", year: "numeric" });
+  return new Date(iso).toLocaleDateString("nl-NL", { weekday: "short", day: "2-digit", month: "long", year: "numeric", timeZone: TZ });
 }
 function fmtTime(iso?: string) {
   if (!iso) return "-";
-  return new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
 }
 
 export default function EventDetailsPopup({
@@ -305,7 +306,7 @@ function TimelineBody({ m }: { m: CalEventMeta & { kind: "soundcheck" } }) {
       <div className="rounded-lg bg-ink-100 p-3">
         <div className="text-[10px] uppercase tracking-wider font-bold text-ink-500">Wanneer</div>
         <div className="text-2xl font-extrabold text-ink-900 mt-1 tabular-nums">
-          {dt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
+          {dt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: TZ })}
         </div>
         <div className="text-xs text-ink-500 mt-0.5">{fmtDate(m.datetime)}</div>
       </div>

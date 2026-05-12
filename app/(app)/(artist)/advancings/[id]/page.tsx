@@ -16,6 +16,9 @@ import RoomAssignmentsEditor from "@/components/booking/RoomAssignmentsEditor";
 import { findAdvancingDetail, loadSnapshot } from "@/lib/snapshot";
 import AdvancingTabs, { type AdvancingTab } from "@/components/advancing/AdvancingTabs";
 import FestivalPortalVisibility from "@/components/advancing/FestivalPortalVisibility";
+import FlightsManager from "@/components/advancing/FlightsManager";
+import AdvancingCalendar from "@/components/calendar/AdvancingCalendar";
+import { buildCalendarEvents } from "@/lib/calendarEvents";
 
 const ICON = {
   tech: "M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z",
@@ -60,6 +63,7 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
       id: "transport",
       label: "Transport",
       iconPath: ICON.transport,
+      badge: flightCount ? String(flightCount) : undefined,
       content: <TransportTab detail={detail} groundTransfers={groundTransfers} today={today} />,
     },
     {
@@ -80,13 +84,6 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
       label: "Hotel",
       iconPath: ICON.hotel,
       content: <HotelTab detail={detail} />,
-    },
-    {
-      id: "flights",
-      label: "Vluchten",
-      iconPath: ICON.flights,
-      badge: String(flightCount),
-      content: <FlightsTab detail={detail} />,
     },
   ];
 
@@ -183,6 +180,21 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
         advancingId={advancing.id}
         initialHidden={(advancing.festival_portal_hidden ?? []) as any}
       />
+
+      {/* Quick-add calendar — klik een dag voor vlucht/hotel/programma/reminder */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h3 className="font-bold text-ink-900">Kalender</h3>
+            <p className="text-[11px] text-ink-500 mt-0.5">Klik op een dag om snel een vlucht, hotel, programma-item of reminder toe te voegen.</p>
+          </div>
+        </div>
+        <AdvancingCalendar
+          events={buildCalendarEvents(snap, new Set([booking.artist_id]), "artist")}
+          advancingId={advancing.id}
+          emptyHint="Voeg vluchten, hotels of programma-items toe door op een dag te klikken."
+        />
+      </section>
 
       {/* Program timeline */}
       <ProgramTimeline
@@ -308,7 +320,11 @@ function TransportTab({
 }) {
   return (
     <>
-      <DistancesBlock distances={detail.distances} />
+      <FlightsManager
+        advancingId={detail.advancing.id}
+        flights={detail.flights}
+        showDate={detail.booking.show_date}
+      />
 
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
         <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Ground transfers</div>
@@ -320,7 +336,7 @@ function TransportTab({
               <li key={t.id} className="px-5 py-3 flex items-center justify-between text-sm">
                 <div>
                   <div className="font-semibold text-ink-900">{t.transfer_type?.replace(/_/g, " ")}</div>
-                  <div className="text-xs text-ink-500">{t.pickup_time ? new Date(t.pickup_time).toLocaleString("nl-NL") : "geen tijd"} {t.notes ? `· ${t.notes}` : ""}</div>
+                  <div className="text-xs text-ink-500">{t.pickup_time ? new Date(t.pickup_time).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }) : "geen tijd"} {t.notes ? `· ${t.notes}` : ""}</div>
                 </div>
                 <StatusPill tone={statusTone(t.status)}>{humanStatus(t.status)}</StatusPill>
               </li>
@@ -328,6 +344,8 @@ function TransportTab({
           </ul>
         )}
       </section>
+
+      <DistancesBlock distances={detail.distances} />
 
       <VisaBlock visa={detail.visa} crew={detail.visa_crew} today={today} />
     </>
@@ -457,38 +475,6 @@ function HotelTab({ detail }: { detail: NonNullable<ReturnType<typeof findAdvanc
         />
       )}
     </>
-  );
-}
-
-function FlightsTab({ detail }: { detail: NonNullable<ReturnType<typeof findAdvancingDetail>> }) {
-  const { flights } = detail;
-  return (
-    <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
-      <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Vluchten ({flights.length})</div>
-      {flights.length === 0 ? (
-        <div className="px-5 py-8 text-sm text-ink-400">Nog geen vluchten geregistreerd. Klik op een dag in de kalender om toe te voegen.</div>
-      ) : (
-        <ul className="divide-y divide-ink-200">
-          {flights.map((f) => (
-            <li key={f.id} className="px-5 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-semibold text-brand-600 uppercase">{f.direction}</div>
-                  <div className="font-bold text-ink-900">{f.airline} {f.flight_number}</div>
-                  <div className="text-xs text-ink-500">
-                    {f.departure_airport} → {f.arrival_airport}
-                  </div>
-                </div>
-                <div className="text-right text-xs text-ink-500">
-                  <div>{new Date(f.departure_datetime).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}</div>
-                  <div>{f.passengers.length} passagiers</div>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
 

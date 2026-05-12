@@ -3,7 +3,7 @@ import type { CalEvent, CalEventMeta } from "@/components/calendar/MonthCalendar
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 }
 function dateOnly(iso: string): string {
   return iso.length >= 10 ? iso.slice(0, 10) : iso;

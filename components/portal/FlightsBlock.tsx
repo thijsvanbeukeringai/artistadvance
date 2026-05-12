@@ -39,7 +39,7 @@ export default function FlightsBlock({ token, flights }: { token: string; flight
                     {f.departure_airport} → {f.arrival_airport}
                   </div>
                   <div className="text-xs text-ink-500 tabular-nums mt-0.5">
-                    {f.departure_datetime ? new Date(f.departure_datetime).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" }) : "-"}
+                    {f.departure_datetime ? new Date(f.departure_datetime).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Amsterdam" }) : "-"}
                     {" · "}
                     {f.passengers.length} passagier{f.passengers.length !== 1 ? "s" : ""}
                   </div>
