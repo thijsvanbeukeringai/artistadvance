@@ -30,6 +30,9 @@ function isPublic(pathname: string) {
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
 
+  // Lokaal: skip auth (env var alleen in .env.local, niet op Vercel).
+  if (process.env.DEV_AUTH_BYPASS === "1") return response;
+
   if (!url || !anonKey) return response;
 
   const supabase = createServerClient(url, anonKey, {

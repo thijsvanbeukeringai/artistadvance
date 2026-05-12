@@ -55,14 +55,74 @@ const GUEST: AccountContext = {
 };
 
 export const readAccount = cache(async (): Promise<AccountContext> => {
+  // Lokale dev-bypass: hardcoded super_admin context, geen DB-lookup nodig.
+  if (process.env.DEV_AUTH_BYPASS === "1") {
+    const HARDCODED_EMAIL = "thijsvanbeukering@icloud.com";
+    const HARDCODED_ORG_ID = "e0de2820-e4f4-40a6-b342-5cbe23579471";
+    const jar = cookies();
+    const modeCookie = (jar.get(COOKIE_MODE)?.value as AccountMode | undefined) ?? "agency";
+    const idCookie = jar.get(COOKIE_ID)?.value;
+
+    // Try snapshot voor labels — als die crasht, fallback naar bare context
+    try {
+      const { loadSnapshot } = await import("./snapshot");
+      const snap = await loadSnapshot();
+      if (modeCookie === "artist") {
+        const artist = snap.artists.find((a) => a.id === idCookie) ?? snap.artists[0];
+        if (artist) {
+          const org = snap.organizations.find((o) => o.id === artist.organization_id);
+          return {
+            mode: "artist",
+            artistId: artist.id,
+            organizationId: artist.organization_id,
+            label: artist.name,
+            sublabel: org?.name ?? "Artist",
+            role: "super_admin",
+            userEmail: HARDCODED_EMAIL,
+            userName: "Thijs (dev)",
+            canImpersonate: true,
+          };
+        }
+      }
+      const managementOrgs = snap.organizations.filter((o) => o.type === "management");
+      const org = managementOrgs.find((o) => o.id === idCookie) ?? managementOrgs.find((o) => o.id === HARDCODED_ORG_ID) ?? managementOrgs[0];
+      return {
+        mode: "agency",
+        artistId: null,
+        organizationId: org?.id ?? HARDCODED_ORG_ID,
+        label: org?.name ?? "Super-admin (dev)",
+        sublabel: "DEV_AUTH_BYPASS actief",
+        role: "super_admin",
+        userEmail: HARDCODED_EMAIL,
+        userName: "Thijs (dev)",
+        canImpersonate: true,
+      };
+    } catch {
+      return {
+        mode: "agency",
+        artistId: null,
+        organizationId: HARDCODED_ORG_ID,
+        label: "Super-admin (dev)",
+        sublabel: "DEV_AUTH_BYPASS actief",
+        role: "super_admin",
+        userEmail: HARDCODED_EMAIL,
+        userName: "Thijs (dev)",
+        canImpersonate: true,
+      };
+    }
+  }
+
   const c = supabaseServer();
   if (!c) return GUEST;
 
   const { data: { user } } = await c.auth.getUser();
   if (!user) return GUEST;
 
-  // Resolve users row
-  const { data: profile } = await c
+  // Resolve users row via service-role (RLS bypass) — anon/authenticated kan
+  // de users-tabel niet lezen na lockdown.
+  const { supabaseService } = await import("./supabase-service");
+  const svc = supabaseService();
+  const { data: profile } = await svc
     .from("users")
     .select("id, name, email, role, organization_id")
     .eq("auth_id", user.id)
