@@ -1127,20 +1127,16 @@ export async function confirmBooking(bookingId: string): Promise<{ advancingId: 
   const { data: existing } = await c.from("advancings").select("id").eq("booking_id", bookingId).maybeSingle();
   if (existing?.id) return { advancingId: existing.id };
 
-  // 3) Genereer crypto-strong portal token + festival token + maak advancing
+  // 3) Genereer crypto-strong portal token + maak advancing
   const { randomBytes } = await import("node:crypto");
   const portal_token = `tk_${randomBytes(24).toString("base64url")}`;
-  const festival_token = `ft_${randomBytes(24).toString("base64url")}`;
   // Default expiry: 1 jaar (lang genoeg voor advancings die tot show-dag actief blijven)
   const portal_token_expires_at = new Date(Date.now() + 365 * 86400000).toISOString();
-  const festival_token_expires_at = new Date(Date.now() + 365 * 86400000).toISOString();
   const { data: adv, error: aErr } = await c.from("advancings").insert({
     booking_id: bookingId,
     status: "pending",
     portal_token,
-    festival_token,
     portal_token_expires_at,
-    festival_token_expires_at,
   }).select("id").single();
   if (aErr || !adv) throw aErr ?? new Error("advancing insert failed");
 
