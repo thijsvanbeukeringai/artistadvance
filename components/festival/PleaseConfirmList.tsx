@@ -73,8 +73,8 @@ function ItemRow({ item }: { item: AdvancingTechItem }) {
 
   return (
     <li className="px-5 py-4">
-      <div className="flex items-start gap-4">
-        <span className={`min-w-[100px] inline-flex items-center justify-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${tone.bg} ${tone.text}`}>
+      <div className="flex items-center gap-4 flex-wrap md:flex-nowrap">
+        <span className={`min-w-[100px] inline-flex items-center justify-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${tone.bg} ${tone.text}`}>
           {tone.label}
         </span>
         <div className="flex-1 min-w-0">
@@ -87,25 +87,25 @@ function ItemRow({ item }: { item: AdvancingTechItem }) {
             <p className="text-xs text-amber-700 mt-0.5">↳ Alt: {item.alternative_description}</p>
           )}
         </div>
-      </div>
-      <div className="mt-3 flex items-center gap-2 flex-wrap">
-        {STATUS_BUTTONS.map((btn) => (
-          <button
-            key={btn.status}
-            type="button"
-            disabled={pending}
-            onClick={() => {
-              if (btn.status === "alternative_offered") {
-                setShowAltForm(true);
-              } else {
-                handleStatus(btn.status);
-              }
-            }}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 ${btn.tone}`}
-          >
-            {btn.label}
-          </button>
-        ))}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {STATUS_BUTTONS.map((btn) => (
+            <button
+              key={btn.status}
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                if (btn.status === "alternative_offered") {
+                  setShowAltForm(true);
+                } else {
+                  handleStatus(btn.status);
+                }
+              }}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 whitespace-nowrap ${btn.tone}`}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
       </div>
       {showAltForm && (
         <form
