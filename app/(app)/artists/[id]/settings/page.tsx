@@ -8,6 +8,8 @@ import TravelDefaultsEditor from "@/components/artistSettings/TravelDefaultsEdit
 import LogisticsDefaultsEditor from "@/components/artistSettings/LogisticsDefaultsEditor";
 import ManagerEditor from "@/components/artistSettings/ManagerEditor";
 import ContractTemplateEditor from "@/components/artistSettings/ContractTemplateEditor";
+import DropboxTree from "@/components/booking/DropboxTree";
+import StatusPill, { humanStatus } from "@/components/StatusPill";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,15 @@ export default async function ArtistSettingsPage({ params }: { params: { id: str
   const crew = snap.artistCrew.filter((c) => c.artist_id === artist.id);
   const defaultCrew = crew.filter((c) => c.is_default).length;
   const bookingCount = snap.bookings.filter((b) => b.artist_id === artist.id && b.status !== "draft").length;
+
+  // Activity aggregeren over alle advancings van deze artist
+  const artistBookingIds = new Set(snap.bookings.filter((b) => b.artist_id === artist.id).map((b) => b.id));
+  const artistAdvancingIds = new Set(
+    snap.advancings.filter((a) => artistBookingIds.has(a.booking_id)).map((a) => a.id),
+  );
+  const artistActivity = snap.activity
+    .filter((a) => artistAdvancingIds.has(a.advancing_id))
+    .slice(0, 50);
 
   return (
     <div className="space-y-6">
@@ -85,6 +96,56 @@ export default async function ArtistSettingsPage({ params }: { params: { id: str
 
       {/* Contract template */}
       <ContractTemplateEditor artistId={artist.id} initialTemplate={artist.contract_template_md ?? null} />
+
+      {/* Dropbox koppeling + folder-structuur */}
+      <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
+        <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+          <div>
+            <h3 className="font-bold text-ink-900">Dropbox</h3>
+            <p className="text-xs text-ink-500 mt-1">
+              Koppel een Dropbox root-folder voor {artist.name}. Bij elke booking-bevestiging wordt automatisch een
+              show-folder aangemaakt volgens de structuur hieronder.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled
+            className="text-xs px-3 py-1.5 rounded-md border border-ink-200 text-ink-400 bg-ink-50 cursor-not-allowed font-semibold"
+            title="Coming soon"
+          >
+            Koppel Dropbox (binnenkort)
+          </button>
+        </div>
+        <div className="text-xs text-ink-500 mb-2 font-mono">
+          Root folder: <span className="text-ink-900">{artist.dropbox_artist_folder ?? `/${artist.name}/`}</span>
+        </div>
+        <DropboxTree rootFolder={artist.dropbox_artist_folder ?? undefined} />
+      </section>
+
+      {/* Activity log (geaggregeerd over alle shows) */}
+      <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-ink-200">
+          <h3 className="font-bold text-ink-900">Activity</h3>
+          <p className="text-xs text-ink-500 mt-1">Laatste 50 acties op shows en advancings van {artist.name}.</p>
+        </div>
+        {artistActivity.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-ink-400">Nog geen activiteit voor deze artiest.</div>
+        ) : (
+          <ul className="divide-y divide-ink-200">
+            {artistActivity.map((a) => (
+              <li key={a.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm text-ink-900">
+                    <span className="font-semibold">{a.user_name}</span> · {a.details ?? humanStatus(a.action)}
+                  </div>
+                  <div className="text-xs text-ink-400">{new Date(a.created_at).toLocaleString("nl-NL")}</div>
+                </div>
+                {a.section_type && <StatusPill tone="soft">{a.section_type}</StatusPill>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

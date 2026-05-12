@@ -6,7 +6,6 @@ import { SECTION_LABELS, SHOW_TYPE_LABELS, TECH_SECTIONS } from "@/lib/data";
 import HotelBlock from "@/components/booking/HotelBlock";
 import DistancesBlock from "@/components/booking/DistancesBlock";
 import VisaBlock from "@/components/booking/VisaBlock";
-import DropboxTree from "@/components/booking/DropboxTree";
 import { computeReadiness } from "@/lib/readiness";
 import ReadinessPanel from "@/components/readiness/ReadinessPanel";
 import TouringPartyTable from "@/components/booking/TouringPartyTable";
@@ -34,7 +33,7 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
   const detail = findAdvancingDetail(snap, params.id);
   if (!detail) return notFound();
 
-  const { advancing, booking, artist, festival, stage, sections, riders, artist_contacts, festival_contacts, flights, activity, technical, logistics, travel, hospitality } = detail;
+  const { advancing, booking, artist, festival, stage, sections, riders, flights } = detail;
 
   const today = new Date("2026-05-09");
   const readiness = computeReadiness(snap, advancing.id, today)!;
@@ -163,18 +162,20 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
         portalToken={advancing.portal_token}
       />
 
-      {/* Portal-links strip */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-4">
-          <div className="text-[11px] uppercase tracking-wider font-bold text-brand-600">Management portal</div>
-          <div className="font-mono text-xs text-ink-700 truncate mt-1">/portal/{advancing.portal_token}</div>
-          <Link href={`/portal/${advancing.portal_token}`} className="mt-2 inline-block text-sm font-semibold text-brand-600 hover:underline">Open management portal →</Link>
-        </div>
-        <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-4">
+      {/* Festival portal link */}
+      <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div>
           <div className="text-[11px] uppercase tracking-wider font-bold text-emerald-700">Festival portal (PLEASE CONFIRM)</div>
           <div className="font-mono text-xs text-ink-700 truncate mt-1">/festival/{advancing.portal_token}</div>
-          <Link href={`/festival/${advancing.portal_token}`} className="mt-2 inline-block text-sm font-semibold text-emerald-700 hover:underline">Open festival portal →</Link>
         </div>
+        <Link
+          href={`/festival/${advancing.portal_token}`}
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition"
+        >
+          Open festival portal →
+        </Link>
       </div>
 
       {/* Program timeline */}
@@ -188,29 +189,6 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
 
       {/* Tabs */}
       <AdvancingTabs tabs={tabs} defaultTab="tech" />
-
-      {/* Dropbox structure */}
-      <DropboxTree rootFolder={advancing.dropbox_show_folder} />
-
-      {/* Activity */}
-      <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Activity</div>
-        {activity.length === 0 ? (
-          <div className="px-5 py-8 text-sm text-ink-400">Nog geen activiteit.</div>
-        ) : (
-          <ul className="divide-y divide-ink-200">
-            {activity.map((a) => (
-              <li key={a.id} className="px-5 py-4 flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-ink-900"><span className="font-semibold">{a.user_name}</span> - {a.details ?? humanStatus(a.action)}</div>
-                  <div className="text-xs text-ink-400">{new Date(a.created_at).toLocaleString("nl-NL")}</div>
-                </div>
-                {a.section_type && <StatusPill tone="soft">{a.section_type}</StatusPill>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }
