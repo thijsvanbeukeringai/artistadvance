@@ -374,6 +374,15 @@ export type SectionType =
 
 export type SectionStatus = "empty" | "in_progress" | "complete" | "locked" | "n_a";
 
+export type FestivalPortalSection =
+  | "tech"      // PLEASE CONFIRM tech items
+  | "program"   // program timeline / schedule
+  | "hotel"     // hotel proposals form
+  | "distances" // airport-hotel-venue distances
+  | "travel"    // flights + ground transfers
+  | "documents" // festival documents upload
+  | "riders";   // signed riders block
+
 export interface Advancing {
   id: string;
   booking_id: string;
@@ -384,6 +393,8 @@ export interface Advancing {
   completed_at?: string;
   locked_at?: string;
   created_at: string;
+  /** Sections die in /festival/<token> verborgen moeten worden. Leeg = alles zichtbaar. */
+  festival_portal_hidden?: FestivalPortalSection[];
 }
 
 export interface AdvancingSection {

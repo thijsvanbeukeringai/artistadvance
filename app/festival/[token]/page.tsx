@@ -17,6 +17,8 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
   if (!detail) return notFound();
   const advId = detail.advancing.id;
   const tech = snap.techItems.filter((t) => t.advancing_id === advId);
+  const hidden = new Set<string>(detail.advancing.festival_portal_hidden ?? []);
+  const show = (k: string) => !hidden.has(k);
 
   const summary = {
     total: tech.length,
@@ -50,30 +52,42 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
         </div>
       </section>
 
-      <ProgramTimeline
-        events={snap.timelineByAdvancing[advId] ?? []}
-        scope={{ token: params.token }}
-        canEdit={true}
-        source="festival"
-        showDate={detail.booking.show_date}
-      />
+      {show("program") && (
+        <ProgramTimeline
+          events={snap.timelineByAdvancing[advId] ?? []}
+          scope={{ token: params.token }}
+          canEdit={true}
+          source="festival"
+          showDate={detail.booking.show_date}
+        />
+      )}
 
-      <PleaseConfirmList items={tech} />
+      {show("tech") && <PleaseConfirmList items={tech} />}
 
-      <DistancesForm token={params.token} distances={snap.distancesByAdvancing[advId] ?? {}} />
+      {show("distances") && (
+        <DistancesForm token={params.token} distances={snap.distancesByAdvancing[advId] ?? {}} />
+      )}
 
-      <GroundTravelBlock
-        token={params.token}
-        flights={detail.flights}
-        transfers={snap.groundTransfersByAdvancing[advId] ?? []}
-        showDate={detail.booking.show_date}
-      />
+      {show("travel") && (
+        <GroundTravelBlock
+          token={params.token}
+          flights={detail.flights}
+          transfers={snap.groundTransfersByAdvancing[advId] ?? []}
+          showDate={detail.booking.show_date}
+        />
+      )}
 
-      <HotelProposalsForm token={params.token} proposals={snap.hotelProposalsByAdvancing[advId] ?? []} />
+      {show("hotel") && (
+        <HotelProposalsForm token={params.token} proposals={snap.hotelProposalsByAdvancing[advId] ?? []} />
+      )}
 
-      <FestivalDocumentsBlock token={params.token} documents={snap.festivalDocumentsByAdvancing[advId] ?? []} />
+      {show("documents") && (
+        <FestivalDocumentsBlock token={params.token} documents={snap.festivalDocumentsByAdvancing[advId] ?? []} />
+      )}
 
-      <SignedRidersBlock token={params.token} riders={snap.signedRiders.filter((r) => r.advancing_id === advId)} />
+      {show("riders") && (
+        <SignedRidersBlock token={params.token} riders={snap.signedRiders.filter((r) => r.advancing_id === advId)} />
+      )}
 
       <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-5 text-sm text-ink-500">
         Vragen? Neem contact op met production-manager <span className="text-ink-900 font-semibold">{detail.artist_contacts[0]?.name ?? "(onbekend)"}</span>

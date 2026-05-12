@@ -1091,6 +1091,58 @@ const HOTEL_FIELD_ALLOWED = new Set([
   "hotel_late_checkout",
 ]);
 
+const VALID_FESTIVAL_PORTAL_SECTIONS = new Set([
+  "tech",
+  "program",
+  "hotel",
+  "distances",
+  "travel",
+  "documents",
+  "riders",
+]);
+
+/**
+ * Sla op welke blokken in het festival-portal verborgen moeten worden voor
+ * deze advancing. Defensief: faalt stilletjes als migratie 030 nog niet
+ * gedraaid is (kolom bestaat niet).
+ */
+export async function setFestivalPortalVisibilityAction(
+  advancingId: string,
+  hidden: string[],
+) {
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+
+  const clean = Array.from(new Set(hidden.filter((s) => VALID_FESTIVAL_PORTAL_SECTIONS.has(s))));
+
+  const { supabaseService } = await import("./supabase-service");
+  const { error } = await supabaseService()
+    .from("advancings")
+    .update({ festival_portal_hidden: clean })
+    .eq("id", advancingId);
+
+  if (error) {
+    if (error.code === "42703" || error.message.includes("column")) {
+      return {
+        ok: false as const,
+        error: "Database-migratie 030 moet nog gedraaid worden (festival_portal_hidden kolom ontbreekt). Run migrations/030_festival_portal_visibility.sql in Supabase SQL editor.",
+      };
+    }
+    return { ok: false as const, error: error.message };
+  }
+
+  revalidatePath(`/advancings/${advancingId}`);
+  // Festival-portal token-pad ook flushen
+  const { data: adv } = await supabaseService()
+    .from("advancings")
+    .select("portal_token")
+    .eq("id", advancingId)
+    .maybeSingle();
+  if (adv?.portal_token) revalidatePath(`/festival/${adv.portal_token}`);
+
+  return { ok: true as const };
+}
+
 export async function setAdvancingHotelAction(
   advancingId: string,
   patch: Record<string, unknown>,

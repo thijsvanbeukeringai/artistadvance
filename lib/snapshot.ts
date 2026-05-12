@@ -411,6 +411,8 @@ export const loadSnapshot = cache(async (): Promise<Snapshot> => {
     completed_at: a.completed_at ?? undefined,
     locked_at: a.locked_at ?? undefined,
     created_at: a.created_at ?? new Date().toISOString(),
+    // Defensief: kolom kan ontbreken als migratie 030 nog niet gedraaid is.
+    festival_portal_hidden: Array.isArray(a.festival_portal_hidden) ? a.festival_portal_hidden : [],
   }));
 
   const sectionsData: AdvancingSection[] = (sectionsR.data ?? []).map((s: any) => ({

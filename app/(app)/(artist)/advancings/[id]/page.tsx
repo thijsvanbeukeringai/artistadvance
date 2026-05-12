@@ -15,6 +15,7 @@ import ProgramTimeline from "@/components/program/ProgramTimeline";
 import RoomAssignmentsEditor from "@/components/booking/RoomAssignmentsEditor";
 import { findAdvancingDetail, loadSnapshot } from "@/lib/snapshot";
 import AdvancingTabs, { type AdvancingTab } from "@/components/advancing/AdvancingTabs";
+import FestivalPortalVisibility from "@/components/advancing/FestivalPortalVisibility";
 
 const ICON = {
   tech: "M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z",
@@ -162,7 +163,7 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
         portalToken={advancing.portal_token}
       />
 
-      {/* Festival portal link */}
+      {/* Festival portal link + visibility toggles */}
       <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-4 flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-[11px] uppercase tracking-wider font-bold text-emerald-700">Festival portal (PLEASE CONFIRM)</div>
@@ -177,6 +178,11 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
           Open festival portal →
         </Link>
       </div>
+
+      <FestivalPortalVisibility
+        advancingId={advancing.id}
+        initialHidden={(advancing.festival_portal_hidden ?? []) as any}
+      />
 
       {/* Program timeline */}
       <ProgramTimeline
