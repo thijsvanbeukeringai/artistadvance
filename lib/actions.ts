@@ -956,6 +956,20 @@ export async function setTechItemStatusAction(itemId: string, patch: { status?: 
     revalidatePath(`/advancings/${item.advancing_id}`);
     revalidatePath("/tracker");
     revalidatePath("/");
+    // Festival- en management-portal flushen — daar staan de buttons die
+    // dit aanroepen, en die routes zijn anders statisch gecached.
+    const { supabaseService } = await import("./supabase-service");
+    const { data: adv } = await supabaseService()
+      .from("advancings")
+      .select("portal_token")
+      .eq("id", item.advancing_id)
+      .maybeSingle();
+    const tok = adv?.portal_token;
+    if (tok) {
+      revalidatePath(`/festival/${tok}`);
+      revalidatePath(`/portal/${tok}`);
+      revalidatePath(`/portal/${tok}/[section]`, "page");
+    }
   }
   return { ok: !!item };
 }

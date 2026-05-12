@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { readAccount, canAccessAdvancing } from "@/lib/account";
 import StatusPill, { humanStatus, statusTone } from "@/components/StatusPill";
-import { SECTION_LABELS, SHOW_TYPE_LABELS } from "@/lib/data";
+import { SECTION_LABELS, SHOW_TYPE_LABELS, TECH_SECTIONS } from "@/lib/data";
 import HotelBlock from "@/components/booking/HotelBlock";
 import DistancesBlock from "@/components/booking/DistancesBlock";
 import VisaBlock from "@/components/booking/VisaBlock";
@@ -17,6 +17,16 @@ import AdvancingCalendar from "@/components/calendar/AdvancingCalendar";
 import { buildCalendarEvents } from "@/lib/calendarEvents";
 import RoomAssignmentsEditor from "@/components/booking/RoomAssignmentsEditor";
 import { findAdvancingDetail, loadSnapshot } from "@/lib/snapshot";
+import AdvancingTabs, { type AdvancingTab } from "@/components/advancing/AdvancingTabs";
+
+const ICON = {
+  tech: "M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z",
+  transport: "M3 11l18-8-8 18-2-7-8-3z",
+  crew: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8z M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75",
+  hospitality: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M17 8l-5-5-5 5 M12 3v12",
+  hotel: "M2 18V8 M22 18v-6a3 3 0 00-3-3H10v8 M2 14h20 M6 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3z",
+  flights: "M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1L15 22v-1.5L13 19v-5.5L21 16z",
+};
 
 export default async function AdvancingDetailPage({ params }: { params: { id: string } }) {
   const [snap, account] = await Promise.all([loadSnapshot(), readAccount()]);
@@ -31,15 +41,67 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
   const today = new Date("2026-05-09");
   const readiness = computeReadiness(snap, advancing.id, today)!;
 
+  const technicalRiders = riders.filter((r) => r.rider_type === "technical" || r.rider_type === "sfx_pyro");
+  const hospitalityRiders = riders.filter((r) => r.rider_type === "hospitality");
+  const techSections = sections.filter((s) => (TECH_SECTIONS as readonly string[]).includes(s.section_type));
+  const groundTransfers = snap.groundTransfersByAdvancing?.[advancing.id] ?? [];
+
+  const techItemCount = detail.tech_items.length;
+  const crewCount = detail.booking_crew.length;
+  const flightCount = flights.length;
+
+  const tabs: AdvancingTab[] = [
+    {
+      id: "tech",
+      label: "Techniek",
+      iconPath: ICON.tech,
+      badge: String(techItemCount),
+      content: <TechTab detail={detail} technicalRiders={technicalRiders} techSections={techSections} />,
+    },
+    {
+      id: "transport",
+      label: "Transport",
+      iconPath: ICON.transport,
+      content: <TransportTab detail={detail} groundTransfers={groundTransfers} today={today} />,
+    },
+    {
+      id: "crew",
+      label: "Crew",
+      iconPath: ICON.crew,
+      badge: String(crewCount),
+      content: <CrewTab detail={detail} snap={snap} />,
+    },
+    {
+      id: "hospitality",
+      label: "Hospitality",
+      iconPath: ICON.hospitality,
+      content: <HospitalityTab detail={detail} hospitalityRiders={hospitalityRiders} />,
+    },
+    {
+      id: "hotel",
+      label: "Hotel",
+      iconPath: ICON.hotel,
+      content: <HotelTab detail={detail} />,
+    },
+    {
+      id: "flights",
+      label: "Vluchten",
+      iconPath: ICON.flights,
+      badge: String(flightCount),
+      content: <FlightsTab detail={detail} />,
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Breadcrumb + header */}
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-ink-400">
         <Link href="/advancings" className="hover:text-ink-700">Advancings</Link>
         <span>/</span>
         <span className="text-ink-700">{artist.name}</span>
       </div>
 
+      {/* Header */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-300 to-brand-600 grid place-items-center text-white text-2xl font-extrabold">
@@ -117,18 +179,18 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
         </div>
       </div>
 
-      {/* Calendar voor advancing — klik op dag opent flight/program-slot popup */}
+      {/* Calendar */}
       <section>
         <div className="flex items-center justify-between mb-2">
           <div>
             <h3 className="font-bold text-ink-900">Kalender</h3>
-            <p className="text-[11px] text-ink-500 mt-0.5">Klik op een dag om snel een vlucht of programma-item toe te voegen.</p>
+            <p className="text-[11px] text-ink-500 mt-0.5">Klik op een dag om een vlucht, hotel, programma-item of reminder toe te voegen.</p>
           </div>
         </div>
         <AdvancingCalendar
           events={buildCalendarEvents(snap, new Set([booking.artist_id]), "artist")}
           advancingId={advancing.id}
-          emptyHint="Voeg vluchten of programma-items toe door op een dag te klikken."
+          emptyHint="Voeg vluchten, hotels of programma-items toe door op een dag te klikken."
         />
       </section>
 
@@ -141,28 +203,50 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
         showDate={booking.show_date}
       />
 
-      {/* Touring party */}
-      <TouringPartyTable
-        bookingId={booking.id}
-        advancingId={advancing.id}
-        crew={detail.booking_crew}
-        flights={detail.flights}
-        artistCrewPool={snap.artistCrew.filter((c) => c.artist_id === artist.id)}
-      />
+      {/* Tabs */}
+      <AdvancingTabs tabs={tabs} defaultTab="tech" />
 
-      {/* Kamer-indeling (alleen als hotel required) */}
-      {detail.hotel.hotel_required && (
-        <RoomAssignmentsEditor
-          advancingId={advancing.id}
-          initial={detail.hotel.room_assignments ?? []}
-          crew={detail.booking_crew}
-          hotelName={detail.hotel.hotel_confirmed_name ?? detail.hotel.hotel_preference}
-          roomCount={detail.hotel.hotel_room_count}
-        />
-      )}
+      {/* Dropbox structure */}
+      <DropboxTree rootFolder={advancing.dropbox_show_folder} />
 
-      {/* Tech items PLEASE CONFIRM */}
-      <div id="tech-items" className="scroll-mt-20 space-y-3">
+      {/* Activity */}
+      <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Activity</div>
+        {activity.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-ink-400">Nog geen activiteit.</div>
+        ) : (
+          <ul className="divide-y divide-ink-200">
+            {activity.map((a) => (
+              <li key={a.id} className="px-5 py-4 flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-ink-900"><span className="font-semibold">{a.user_name}</span> - {a.details ?? humanStatus(a.action)}</div>
+                  <div className="text-xs text-ink-400">{new Date(a.created_at).toLocaleString("nl-NL")}</div>
+                </div>
+                {a.section_type && <StatusPill tone="soft">{a.section_type}</StatusPill>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
+// ─── Tab content components ────────────────────────────────────────────────
+
+function TechTab({
+  detail,
+  technicalRiders,
+  techSections,
+}: {
+  detail: NonNullable<ReturnType<typeof findAdvancingDetail>>;
+  technicalRiders: typeof detail.riders;
+  techSections: typeof detail.sections;
+}) {
+  const { advancing, technical, logistics } = detail;
+  return (
+    <>
+      <div id="tech-items" className="space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="font-bold text-ink-900">Tech requirements (PLEASE CONFIRM)</h3>
           <SyncTechFromTemplateButton advancingId={advancing.id} />
@@ -170,24 +254,13 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
         <TechItemsList items={detail.tech_items} />
       </div>
 
-      {/* Hotel / Distances / Visa */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <HotelBlock hotel={detail.hotel} />
-        <DistancesBlock distances={detail.distances} />
-        <VisaBlock visa={detail.visa} crew={detail.visa_crew} today={today} />
-      </section>
-
-      {/* Dropbox structure */}
-      <DropboxTree rootFolder={advancing.dropbox_show_folder} />
-
-      {/* All 18 sections grid - elke kaart linkt door naar de portal section voor specs/edit */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-ink-900">Alle advancing secties</h3>
+          <h3 className="font-bold text-ink-900">Tech sub-secties</h3>
           <span className="text-xs text-ink-500">Klik een kaart voor specs en invul-velden</span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {sections.map((s) => {
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {techSections.map((s) => {
             const tone = s.status === "complete" || s.status === "locked" ? "ok" : s.status === "in_progress" ? "info" : s.status === "n_a" ? "neutral" : "warn";
             return (
               <Link
@@ -214,68 +287,98 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
         </div>
       </section>
 
-      {/* Riders + flights */}
-      <section id="riders" className="grid grid-cols-1 lg:grid-cols-2 gap-4 scroll-mt-20">
-        <div className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
-          <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Getekende riders</div>
-          <ul className="divide-y divide-ink-200">
-            {riders.map((r) => (
-              <li key={r.id} className="px-5 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-ink-900">
-                      {r.rider_type === "technical" ? "Technische rider" : r.rider_type === "hospitality" ? "Hospitality rider" : "SFX/Pyro rider"}
-                    </div>
-                    {r.signed_by_name && (
-                      <div className="text-[11px] text-emerald-700 mt-0.5">
-                        Getekend door <span className="font-bold">{r.signed_by_name}</span>
-                        {r.signed_by_role && ` (${r.signed_by_role})`}
-                        {r.signed_at && <span className="text-ink-500"> op {new Date(r.signed_at).toLocaleDateString("nl-NL")}</span>}
-                      </div>
-                    )}
-                    {r.signed_url && (
-                      <a href={r.signed_url} target="_blank" rel="noopener" className="text-xs font-semibold text-brand-600 hover:underline mt-1 inline-block">
-                        Open getekende PDF →
-                      </a>
-                    )}
-                    {r.dispute_notes && <div className="text-xs text-red-600 mt-1 italic">{r.dispute_notes}</div>}
-                  </div>
-                  <StatusPill tone={statusTone(r.status)}>{humanStatus(r.status)}</StatusPill>
-                </div>
-              </li>
-            ))}
-          </ul>
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
+          <h4 className="font-bold text-ink-900 mb-3">Technische details</h4>
+          <dl className="text-sm space-y-2">
+            <div className="flex justify-between"><dt className="text-ink-500">FOH engineer</dt><dd className="text-ink-900 font-medium">{technical.foh_engineer_name ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Channel count</dt><dd className="text-ink-900 font-medium">{technical.channel_count ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Monitor setup</dt><dd className="text-ink-900 font-medium">{technical.monitor_setup ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Light setup</dt><dd className="text-ink-900 font-medium">{technical.light_setup_type ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Pyro</dt><dd className="text-ink-900 font-medium">{technical.pyro_required ? "Ja" : "Nee"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Stageplot</dt><dd className="text-ink-900 font-medium">{technical.stageplot_uploaded ? "Geüpload" : "Mist"}</dd></div>
+          </dl>
         </div>
 
-        <div className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
-          <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Vluchten</div>
-          {flights.length === 0 ? (
-            <div className="px-5 py-8 text-sm text-ink-400">Nog geen vluchten geregistreerd.</div>
-          ) : (
-            <ul className="divide-y divide-ink-200">
-              {flights.map((f) => (
-                <li key={f.id} className="px-5 py-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-semibold text-brand-600 uppercase">{f.direction}</div>
-                      <div className="font-bold text-ink-900">{f.airline} {f.flight_number}</div>
-                      <div className="text-xs text-ink-500">
-                        {f.departure_airport} → {f.arrival_airport}
-                      </div>
-                    </div>
-                    <div className="text-right text-xs text-ink-500">
-                      <div>{new Date(f.departure_datetime).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}</div>
-                      <div>{f.passengers.length} passagiers</div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
+          <h4 className="font-bold text-ink-900 mb-3">Logistiek (load-in / show / load-out)</h4>
+          <dl className="text-sm space-y-2">
+            <div className="flex justify-between"><dt className="text-ink-500">Load-in</dt><dd className="text-ink-900 font-medium">{logistics.load_in_time ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Soundcheck</dt><dd className="text-ink-900 font-medium">{logistics.soundcheck_time ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Showtime</dt><dd className="text-ink-900 font-medium">{logistics.show_time ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Load-out</dt><dd className="text-ink-900 font-medium">{logistics.load_out_time ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Crew meekomend</dt><dd className="text-ink-900 font-medium">{logistics.crew_traveling ?? "-"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-500">Parking</dt><dd className="text-ink-900 font-medium">{logistics.parking_spots_needed ?? "-"}</dd></div>
+          </dl>
+          {logistics.notes && <p className="mt-3 text-xs italic text-ink-500">{logistics.notes}</p>}
         </div>
       </section>
 
-      {/* Contacts */}
+      <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Technische riders</div>
+        {technicalRiders.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-ink-400">Geen technische riders.</div>
+        ) : (
+          <ul className="divide-y divide-ink-200">
+            {technicalRiders.map((r) => (
+              <RiderRow key={r.id} r={r} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
+
+function TransportTab({
+  detail,
+  groundTransfers,
+  today,
+}: {
+  detail: NonNullable<ReturnType<typeof findAdvancingDetail>>;
+  groundTransfers: any[];
+  today: Date;
+}) {
+  return (
+    <>
+      <DistancesBlock distances={detail.distances} />
+
+      <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Ground transfers</div>
+        {groundTransfers.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-ink-400">Nog geen ground transfers geregistreerd.</div>
+        ) : (
+          <ul className="divide-y divide-ink-200">
+            {groundTransfers.map((t) => (
+              <li key={t.id} className="px-5 py-3 flex items-center justify-between text-sm">
+                <div>
+                  <div className="font-semibold text-ink-900">{t.transfer_type?.replace(/_/g, " ")}</div>
+                  <div className="text-xs text-ink-500">{t.pickup_time ? new Date(t.pickup_time).toLocaleString("nl-NL") : "geen tijd"} {t.notes ? `· ${t.notes}` : ""}</div>
+                </div>
+                <StatusPill tone={statusTone(t.status)}>{humanStatus(t.status)}</StatusPill>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <VisaBlock visa={detail.visa} crew={detail.visa_crew} today={today} />
+    </>
+  );
+}
+
+function CrewTab({ detail, snap }: { detail: NonNullable<ReturnType<typeof findAdvancingDetail>>; snap: any }) {
+  const { advancing, booking, artist, artist_contacts, festival_contacts } = detail;
+  return (
+    <>
+      <TouringPartyTable
+        bookingId={booking.id}
+        advancingId={advancing.id}
+        crew={detail.booking_crew}
+        flights={detail.flights}
+        artistCrewPool={snap.artistCrew.filter((c: any) => c.artist_id === artist.id)}
+      />
+
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
           <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Contactpersonen artiest</div>
@@ -320,67 +423,132 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
           )}
         </div>
       </section>
+    </>
+  );
+}
 
-      {/* Quick details */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
-          <h4 className="font-bold text-ink-900 mb-3">Logistiek</h4>
-          <dl className="text-sm space-y-2">
-            <div className="flex justify-between"><dt className="text-ink-500">Load-in</dt><dd className="text-ink-900 font-medium">{logistics.load_in_time ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Soundcheck</dt><dd className="text-ink-900 font-medium">{logistics.soundcheck_time ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Showtime</dt><dd className="text-ink-900 font-medium">{logistics.show_time ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Load-out</dt><dd className="text-ink-900 font-medium">{logistics.load_out_time ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Crew meekomend</dt><dd className="text-ink-900 font-medium">{logistics.crew_traveling ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Parking</dt><dd className="text-ink-900 font-medium">{logistics.parking_spots_needed ?? "-"}</dd></div>
-          </dl>
-          {logistics.notes && <p className="mt-3 text-xs italic text-ink-500">{logistics.notes}</p>}
-        </div>
-
-        <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
-          <h4 className="font-bold text-ink-900 mb-3">Technisch</h4>
-          <dl className="text-sm space-y-2">
-            <div className="flex justify-between"><dt className="text-ink-500">FOH engineer</dt><dd className="text-ink-900 font-medium">{technical.foh_engineer_name ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Channel count</dt><dd className="text-ink-900 font-medium">{technical.channel_count ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Monitor setup</dt><dd className="text-ink-900 font-medium">{technical.monitor_setup ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Light setup</dt><dd className="text-ink-900 font-medium">{technical.light_setup_type ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Pyro</dt><dd className="text-ink-900 font-medium">{technical.pyro_required ? "Ja" : "Nee"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Stageplot</dt><dd className="text-ink-900 font-medium">{technical.stageplot_uploaded ? "Geüpload" : "Mist"}</dd></div>
-          </dl>
-        </div>
-
-        <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
-          <h4 className="font-bold text-ink-900 mb-3">Hospitality & travel</h4>
-          <dl className="text-sm space-y-2">
-            <div className="flex justify-between"><dt className="text-ink-500">Party size</dt><dd className="text-ink-900 font-medium">{hospitality.party_size ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Warme maaltijd</dt><dd className="text-ink-900 font-medium">{hospitality.hot_meal_required ? "Ja" : "Nee"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Dressing rooms</dt><dd className="text-ink-900 font-medium">{hospitality.dressing_room_count ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Hotel</dt><dd className="text-ink-900 font-medium">{travel.hotel_required ? `${travel.hotel_room_count ?? "-"} kamers` : "Geen"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Check-in</dt><dd className="text-ink-900 font-medium">{travel.hotel_check_in ?? "-"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-500">Check-out</dt><dd className="text-ink-900 font-medium">{travel.hotel_check_out ?? "-"}</dd></div>
-          </dl>
-          {hospitality.specific_requests && <p className="mt-3 text-xs italic text-ink-500">{hospitality.specific_requests}</p>}
-        </div>
+function HospitalityTab({
+  detail,
+  hospitalityRiders,
+}: {
+  detail: NonNullable<ReturnType<typeof findAdvancingDetail>>;
+  hospitalityRiders: typeof detail.riders;
+}) {
+  const { hospitality } = detail;
+  return (
+    <>
+      <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
+        <h4 className="font-bold text-ink-900 mb-3">Hospitality</h4>
+        <dl className="text-sm space-y-2">
+          <div className="flex justify-between"><dt className="text-ink-500">Party size</dt><dd className="text-ink-900 font-medium">{hospitality.party_size ?? "-"}</dd></div>
+          <div className="flex justify-between"><dt className="text-ink-500">Warme maaltijd</dt><dd className="text-ink-900 font-medium">{hospitality.hot_meal_required ? "Ja" : "Nee"}</dd></div>
+          <div className="flex justify-between"><dt className="text-ink-500">Dressing rooms</dt><dd className="text-ink-900 font-medium">{hospitality.dressing_room_count ?? "-"}</dd></div>
+        </dl>
+        {hospitality.specific_requests && <p className="mt-3 text-xs italic text-ink-500">{hospitality.specific_requests}</p>}
       </section>
 
-      {/* Activity */}
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Activity</div>
-        {activity.length === 0 ? (
-          <div className="px-5 py-8 text-sm text-ink-400">Nog geen activiteit.</div>
+        <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Hospitality rider</div>
+        {hospitalityRiders.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-ink-400">Geen hospitality rider gekoppeld.</div>
         ) : (
           <ul className="divide-y divide-ink-200">
-            {activity.map((a) => (
-              <li key={a.id} className="px-5 py-4 flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-ink-900"><span className="font-semibold">{a.user_name}</span> - {a.details ?? humanStatus(a.action)}</div>
-                  <div className="text-xs text-ink-400">{new Date(a.created_at).toLocaleString("nl-NL")}</div>
-                </div>
-                {a.section_type && <StatusPill tone="soft">{a.section_type}</StatusPill>}
-              </li>
+            {hospitalityRiders.map((r) => (
+              <RiderRow key={r.id} r={r} />
             ))}
           </ul>
         )}
       </section>
-    </div>
+    </>
+  );
+}
+
+function HotelTab({ detail }: { detail: NonNullable<ReturnType<typeof findAdvancingDetail>> }) {
+  const { advancing, travel } = detail;
+  return (
+    <>
+      <HotelBlock hotel={detail.hotel} />
+
+      <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
+        <h4 className="font-bold text-ink-900 mb-3">Check-in / Check-out</h4>
+        <dl className="text-sm space-y-2">
+          <div className="flex justify-between"><dt className="text-ink-500">Hotel benodigd</dt><dd className="text-ink-900 font-medium">{travel.hotel_required ? "Ja" : "Nee"}</dd></div>
+          <div className="flex justify-between"><dt className="text-ink-500">Aantal kamers</dt><dd className="text-ink-900 font-medium">{travel.hotel_room_count ?? "-"}</dd></div>
+          <div className="flex justify-between"><dt className="text-ink-500">Check-in</dt><dd className="text-ink-900 font-medium">{travel.hotel_check_in ?? "-"}</dd></div>
+          <div className="flex justify-between"><dt className="text-ink-500">Check-out</dt><dd className="text-ink-900 font-medium">{travel.hotel_check_out ?? "-"}</dd></div>
+          <div className="flex justify-between"><dt className="text-ink-500">Aantal nachten</dt><dd className="text-ink-900 font-medium">{detail.hotel.hotel_nights ?? "-"}</dd></div>
+        </dl>
+      </section>
+
+      {detail.hotel.hotel_required && (
+        <RoomAssignmentsEditor
+          advancingId={advancing.id}
+          initial={detail.hotel.room_assignments ?? []}
+          crew={detail.booking_crew}
+          hotelName={detail.hotel.hotel_confirmed_name ?? detail.hotel.hotel_preference}
+          roomCount={detail.hotel.hotel_room_count}
+        />
+      )}
+    </>
+  );
+}
+
+function FlightsTab({ detail }: { detail: NonNullable<ReturnType<typeof findAdvancingDetail>> }) {
+  const { flights } = detail;
+  return (
+    <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-ink-200 font-bold text-ink-900">Vluchten ({flights.length})</div>
+      {flights.length === 0 ? (
+        <div className="px-5 py-8 text-sm text-ink-400">Nog geen vluchten geregistreerd. Klik op een dag in de kalender om toe te voegen.</div>
+      ) : (
+        <ul className="divide-y divide-ink-200">
+          {flights.map((f) => (
+            <li key={f.id} className="px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-brand-600 uppercase">{f.direction}</div>
+                  <div className="font-bold text-ink-900">{f.airline} {f.flight_number}</div>
+                  <div className="text-xs text-ink-500">
+                    {f.departure_airport} → {f.arrival_airport}
+                  </div>
+                </div>
+                <div className="text-right text-xs text-ink-500">
+                  <div>{new Date(f.departure_datetime).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}</div>
+                  <div>{f.passengers.length} passagiers</div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function RiderRow({ r }: { r: any }) {
+  return (
+    <li className="px-5 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-ink-900">
+            {r.rider_type === "technical" ? "Technische rider" : r.rider_type === "hospitality" ? "Hospitality rider" : "SFX/Pyro rider"}
+          </div>
+          {r.signed_by_name && (
+            <div className="text-[11px] text-emerald-700 mt-0.5">
+              Getekend door <span className="font-bold">{r.signed_by_name}</span>
+              {r.signed_by_role && ` (${r.signed_by_role})`}
+              {r.signed_at && <span className="text-ink-500"> op {new Date(r.signed_at).toLocaleDateString("nl-NL")}</span>}
+            </div>
+          )}
+          {r.signed_url && (
+            <a href={r.signed_url} target="_blank" rel="noopener" className="text-xs font-semibold text-brand-600 hover:underline mt-1 inline-block">
+              Open getekende PDF →
+            </a>
+          )}
+          {r.dispute_notes && <div className="text-xs text-red-600 mt-1 italic">{r.dispute_notes}</div>}
+        </div>
+        <StatusPill tone={statusTone(r.status)}>{humanStatus(r.status)}</StatusPill>
+      </div>
+    </li>
   );
 }

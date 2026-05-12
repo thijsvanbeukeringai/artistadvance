@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { setTechItemStatusAction } from "@/lib/actions";
 import type { AdvancingTechItem, TechCategory, TechItemStatus } from "@/lib/types";
 import { SECTION_LABELS } from "@/lib/data";
@@ -51,6 +52,7 @@ export default function PleaseConfirmList({ items }: { items: AdvancingTechItem[
 }
 
 function ItemRow({ item }: { item: AdvancingTechItem }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showAltForm, setShowAltForm] = useState(false);
   const [altText, setAltText] = useState(item.alternative_description ?? "");
@@ -64,6 +66,8 @@ function ItemRow({ item }: { item: AdvancingTechItem }) {
         alternative_description: alternative,
       });
       setShowAltForm(false);
+      // Forceer hydratie van de server-component zodat de pill + counts updaten.
+      router.refresh();
     });
   }
 

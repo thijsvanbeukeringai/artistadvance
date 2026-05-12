@@ -9,6 +9,8 @@ import StatusPill, { humanStatus, statusTone } from "@/components/StatusPill";
 import ProgramTimeline from "@/components/program/ProgramTimeline";
 import { findPortalDetail, loadSnapshot } from "@/lib/snapshot";
 
+export const dynamic = "force-dynamic";
+
 export default async function FestivalPortalPage({ params }: { params: { token: string } }) {
   const snap = await loadSnapshot();
   const detail = findPortalDetail(snap, params.token);
