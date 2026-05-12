@@ -112,12 +112,16 @@ async function recomputeSectionPercent(advId: string, type: SectionType): Promis
     const items = data ?? [];
     if (items.length === 0) percent = 0;
     else {
+      // "requested" = items zijn opgesteld + naar festival gestuurd, maar nog
+      // niet bevestigd. Telt als 'gestart' (10%) zodat de sectie niet als
+      // empty terug komt. "Sent" maar nog niet beantwoord = ~10% klaar.
       const score = items.reduce((s: number, i: any) => {
         if (i.status === "accepted") return s + 1;
         if (i.status === "confirmed") return s + 0.85;
         if (i.status === "alternative_offered") return s + 0.4;
         if (i.status === "not_available") return s + 0.2;
         if (i.status === "disputed") return s - 0.2;
+        if (i.status === "requested") return s + 0.1;
         return s;
       }, 0);
       percent = Math.max(0, Math.min(100, Math.round((score / items.length) * 100)));
@@ -1149,14 +1153,20 @@ export async function syncAdvancingTechFromArtistTemplate(advancingId: string): 
       sort_order: t.sort_order,
     }));
 
-  if (newRows.length === 0) return { inserted: 0 };
+  // Resync alle tech-categorieen, ook als 0 inserts — handelt het geval
+  // waarin items wel bestaan maar advancing_sections.completion_percent is
+  // stale (oude scoring of nooit bijgewerkt na een eerdere wijziging).
+  const TECH_CATEGORIES: SectionType[] = [
+    "dj_gear","monitors","audio","light","video","lasers",
+    "sfx_pyro","stage","ethernet","communication","power","backline",
+  ];
 
-  const { error } = await c.from("advancing_tech_items").insert(newRows);
-  if (error) throw error;
+  if (newRows.length > 0) {
+    const { error } = await c.from("advancing_tech_items").insert(newRows);
+    if (error) throw error;
+  }
 
-  // Hersync section-statussen die door deze inserts kunnen wijzigen.
-  const categories = Array.from(new Set(newRows.map((r) => r.category as SectionType)));
-  await Promise.all(categories.map((cat) => syncSectionStatus(advancingId, cat)));
+  await Promise.all(TECH_CATEGORIES.map((cat) => syncSectionStatus(advancingId, cat)));
 
   return { inserted: newRows.length };
 }
