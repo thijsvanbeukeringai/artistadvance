@@ -8,8 +8,18 @@ import GroundTravelBlock from "@/components/festival/GroundTravelBlock";
 import StatusPill, { humanStatus, statusTone } from "@/components/StatusPill";
 import ProgramTimeline from "@/components/program/ProgramTimeline";
 import { findPortalDetail, loadSnapshot } from "@/lib/snapshot";
+import AdvancingTabs, { type AdvancingTab } from "@/components/advancing/AdvancingTabs";
 
 export const dynamic = "force-dynamic";
+
+const ICON = {
+  program: "M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z",
+  tech: "M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z",
+  transport: "M3 11l18-8-8 18-2-7-8-3z",
+  hotel: "M2 18V8 M22 18v-6a3 3 0 00-3-3H10v8 M2 14h20 M6 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3z",
+  documents: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M9 13h6 M9 17h6",
+  riders: "M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z",
+};
 
 export default async function FestivalPortalPage({ params }: { params: { token: string } }) {
   const snap = await loadSnapshot();
@@ -28,7 +38,6 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
     disputed: tech.filter((i) => i.status === "disputed").length,
   };
 
-  // Hele sectie verbergen als al z'n sub-blokken verborgen zijn
   const hasRunOfShow = show("program");
   const hasTechnical = show("tech");
   const hasTransport = show("travel") || show("distances");
@@ -36,8 +45,95 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
   const hasDocuments = show("documents");
   const hasRiders = show("riders");
 
+  const tabs: AdvancingTab[] = [];
+
+  if (hasRunOfShow) {
+    tabs.push({
+      id: "program",
+      label: "Run of show",
+      iconPath: ICON.program,
+      content: (
+        <ProgramTimeline
+          events={snap.timelineByAdvancing[advId] ?? []}
+          scope={{ token: params.token }}
+          canEdit={true}
+          source="festival"
+          showDate={detail.booking.show_date}
+        />
+      ),
+    });
+  }
+
+  if (hasTechnical) {
+    tabs.push({
+      id: "tech",
+      label: "Technical",
+      iconPath: ICON.tech,
+      badge: String(summary.total),
+      content: <PleaseConfirmList items={tech} />,
+    });
+  }
+
+  if (hasTransport) {
+    const flightCount = detail.flights.length;
+    tabs.push({
+      id: "transport",
+      label: "Transport",
+      iconPath: ICON.transport,
+      badge: flightCount ? String(flightCount) : undefined,
+      content: (
+        <>
+          {show("travel") && (
+            <GroundTravelBlock
+              token={params.token}
+              flights={detail.flights}
+              transfers={snap.groundTransfersByAdvancing[advId] ?? []}
+              showDate={detail.booking.show_date}
+            />
+          )}
+          {show("distances") && (
+            <DistancesForm token={params.token} distances={snap.distancesByAdvancing[advId] ?? {}} />
+          )}
+        </>
+      ),
+    });
+  }
+
+  if (hasHotel) {
+    const hotelCount = (snap.hotelProposalsByAdvancing[advId] ?? []).length;
+    tabs.push({
+      id: "hotel",
+      label: "Hotel",
+      iconPath: ICON.hotel,
+      badge: hotelCount ? String(hotelCount) : undefined,
+      content: <HotelProposalsForm token={params.token} proposals={snap.hotelProposalsByAdvancing[advId] ?? []} />,
+    });
+  }
+
+  if (hasDocuments) {
+    const docCount = (snap.festivalDocumentsByAdvancing[advId] ?? []).length;
+    tabs.push({
+      id: "documents",
+      label: "Documents",
+      iconPath: ICON.documents,
+      badge: docCount ? String(docCount) : undefined,
+      content: <FestivalDocumentsBlock token={params.token} documents={snap.festivalDocumentsByAdvancing[advId] ?? []} />,
+    });
+  }
+
+  if (hasRiders) {
+    const riders = snap.signedRiders.filter((r) => r.advancing_id === advId);
+    tabs.push({
+      id: "riders",
+      label: "Riders",
+      iconPath: ICON.riders,
+      badge: riders.length ? String(riders.length) : undefined,
+      content: <SignedRidersBlock token={params.token} riders={riders} />,
+    });
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* HEADER */}
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-6">
         <div className="flex items-start justify-between flex-wrap gap-3">
@@ -47,7 +143,7 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
               Advancing van {detail.artist.name}
             </h1>
             <p className="text-sm text-ink-500 mt-1">
-              Loop deze blokken door — vul aan, bevestig of bied alternatieven. Management ziet je input live.
+              Loop de tabbladen door — vul aan, bevestig of bied alternatieven. Management ziet je input live.
             </p>
           </div>
           <StatusPill tone={statusTone(detail.advancing.status)}>{humanStatus(detail.advancing.status)}</StatusPill>
@@ -63,85 +159,9 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
         )}
       </section>
 
-      {/* RUN OF SHOW */}
-      {hasRunOfShow && (
-        <Group eyebrow="Run of show" title="Programma & timings" description="Load-in, soundcheck, doors, show, load-out — vul timings aan zodat het management één bron van waarheid heeft." tone="ink">
-          <ProgramTimeline
-            events={snap.timelineByAdvancing[advId] ?? []}
-            scope={{ token: params.token }}
-            canEdit={true}
-            source="festival"
-            showDate={detail.booking.show_date}
-          />
-        </Group>
-      )}
-
-      {/* TECHNICAL */}
-      {hasTechnical && (
-        <Group eyebrow="Technical" title="Hardware & specs" description="Bevestig per item, bied een alternatief of meld 'niet beschikbaar'." tone="emerald">
-          <PleaseConfirmList items={tech} />
-        </Group>
-      )}
-
-      {/* TRANSPORT */}
-      {hasTransport && (
-        <Group
-          eyebrow="Transport"
-          title="Vluchten, transfers & afstanden"
-          description="Inbound en outbound vluchten van de touring party, ground-transfers airport ↔ hotel ↔ venue, en afstanden in km/minuten."
-          tone="sky"
-        >
-          {show("travel") && (
-            <GroundTravelBlock
-              token={params.token}
-              flights={detail.flights}
-              transfers={snap.groundTransfersByAdvancing[advId] ?? []}
-              showDate={detail.booking.show_date}
-            />
-          )}
-          {show("distances") && (
-            <DistancesForm token={params.token} distances={snap.distancesByAdvancing[advId] ?? {}} />
-          )}
-        </Group>
-      )}
-
-      {/* HOTEL */}
-      {hasHotel && (
-        <Group
-          eyebrow="Hotel"
-          title="Hotel-voorstellen"
-          description="Stel hotelopties voor — naam, sterren, afstand tot venue, prijs. Management kiest een optie ter bevestiging."
-          tone="orange"
-        >
-          <HotelProposalsForm token={params.token} proposals={snap.hotelProposalsByAdvancing[advId] ?? []} />
-        </Group>
-      )}
-
-      {/* DOCUMENTS */}
-      {hasDocuments && (
-        <Group
-          eyebrow="Documents"
-          title="Festival-documenten"
-          description="Upload je technical pack, parking map, stagepass policy en andere relevante bestanden."
-          tone="violet"
-        >
-          <FestivalDocumentsBlock token={params.token} documents={snap.festivalDocumentsByAdvancing[advId] ?? []} />
-        </Group>
-      )}
-
-      {/* RIDERS */}
-      {hasRiders && (
-        <Group
-          eyebrow="Riders"
-          title="Getekende riders"
-          description="Open de rider, teken digitaal of upload een PDF met handtekening van de promoter / production manager."
-          tone="rose"
-        >
-          <SignedRidersBlock
-            token={params.token}
-            riders={snap.signedRiders.filter((r) => r.advancing_id === advId)}
-          />
-        </Group>
+      {/* TABS */}
+      {tabs.length > 0 && (
+        <AdvancingTabs tabs={tabs} defaultTab={tabs[0].id} />
       )}
 
       {/* FOOTER */}
@@ -164,41 +184,5 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: "def
       <div className="opacity-80">{label}</div>
       <div className="text-2xl font-extrabold tabular-nums mt-0.5">{value}</div>
     </div>
-  );
-}
-
-type GroupTone = "ink" | "emerald" | "sky" | "orange" | "violet" | "rose";
-
-function Group({
-  eyebrow,
-  title,
-  description,
-  tone = "ink",
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  description?: string;
-  tone?: GroupTone;
-  children: React.ReactNode;
-}) {
-  const eyebrowCls =
-    tone === "emerald" ? "text-emerald-700 bg-emerald-50" :
-    tone === "sky" ? "text-sky-700 bg-sky-50" :
-    tone === "orange" ? "text-orange-700 bg-orange-50" :
-    tone === "violet" ? "text-violet-700 bg-violet-50" :
-    tone === "rose" ? "text-rose-700 bg-rose-50" :
-    "text-ink-700 bg-ink-100";
-  return (
-    <section className="space-y-3">
-      <header className="pt-2">
-        <span className={`inline-block text-[10px] font-bold uppercase tracking-[0.18em] px-2 py-1 rounded ${eyebrowCls}`}>
-          {eyebrow}
-        </span>
-        <h2 className="text-xl font-extrabold text-ink-900 mt-2">{title}</h2>
-        {description && <p className="text-sm text-ink-500 mt-1 max-w-2xl">{description}</p>}
-      </header>
-      <div className="space-y-4">{children}</div>
-    </section>
   );
 }
