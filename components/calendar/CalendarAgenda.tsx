@@ -49,7 +49,7 @@ export default function CalendarAgenda({
   onDayClick?: (dateStr: string) => void;
 }) {
   const [openEvent, setOpenEvent] = useState<CalEvent | null>(null);
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" });
 
   // Group events by ISO date, expand multi-day events
   const byDate = useMemo(() => {
@@ -76,14 +76,24 @@ export default function CalendarAgenda({
   }
 
   // Build rows with month-headers
-  const rows: { type: "month"; label: string } | { type: "day"; iso: string; events: CalEvent[] }[] = [];
-  const out: ({ type: "month"; label: string } | { type: "day"; iso: string; events: CalEvent[] })[] = [];
+  type Row =
+    | { type: "month"; label: string; isCurrentMonth: boolean }
+    | { type: "day"; iso: string; events: CalEvent[] };
+  const out: Row[] = [];
   let lastMonth = "";
+  const todayMonthKey = (() => {
+    const t = new Date(todayIso + "T00:00:00");
+    return `${t.getFullYear()}-${t.getMonth()}`;
+  })();
   for (const iso of sortedDates) {
     const d = new Date(iso + "T00:00:00");
     const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
     if (monthKey !== lastMonth) {
-      out.push({ type: "month", label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}` });
+      out.push({
+        type: "month",
+        label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+        isCurrentMonth: monthKey === todayMonthKey,
+      });
       lastMonth = monthKey;
     }
     out.push({ type: "day", iso, events: byDate.get(iso) ?? [] });
@@ -97,16 +107,18 @@ export default function CalendarAgenda({
             <div key={`m-${i}`} className="sticky top-0 z-10 bg-ink-50 border-b border-ink-200 px-3 py-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700 capitalize">{row.label}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el = document.getElementById(`day-${todayIso}`);
-                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }}
-                  className="text-[10px] font-bold uppercase tracking-wider text-brand-600"
-                >
-                  Vandaag
-                </button>
+                {row.isCurrentMonth && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById(`day-${todayIso}`);
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                    className="text-[10px] font-bold uppercase tracking-wider text-brand-600"
+                  >
+                    Vandaag
+                  </button>
+                )}
               </div>
             </div>
           );
