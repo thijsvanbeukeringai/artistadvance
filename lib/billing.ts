@@ -69,7 +69,7 @@ export async function createCheckoutSessionAction(tier: PricingTier, interval: B
     allow_promotion_codes: true,
     subscription_data: {
       metadata: { organization_id: account.organizationId },
-      trial_period_days: 14,
+      trial_period_days: 7,
     },
     metadata: { organization_id: account.organizationId },
   });

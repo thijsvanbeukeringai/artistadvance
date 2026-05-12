@@ -22,15 +22,19 @@ const STATUS_TONE: Record<string, string> = {
 export default function SignedRidersBlock({
   token,
   riders,
+  title = "Riders",
+  subtitle = "Bekijk het document, teken digitaal of upload een PDF met handtekening.",
 }: {
   token: string;
   riders: SignedRider[];
+  title?: string;
+  subtitle?: string;
 }) {
   return (
     <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
       <header className="px-5 py-4 border-b border-ink-200">
-        <h3 className="font-bold text-ink-900">Riders</h3>
-        <p className="text-xs text-ink-500 mt-0.5">Bekijk het document, teken digitaal of upload een PDF met handtekening.</p>
+        <h3 className="font-bold text-ink-900">{title}</h3>
+        <p className="text-xs text-ink-500 mt-0.5">{subtitle}</p>
       </header>
       <ul className="divide-y divide-ink-200">
         {riders.length === 0 && (

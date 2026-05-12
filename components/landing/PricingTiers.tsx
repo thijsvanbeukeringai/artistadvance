@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { createCheckoutSessionAction } from "@/lib/billing";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { PricingTier } from "@/lib/stripe";
 
 type Interval = "monthly" | "yearly";
@@ -37,19 +37,14 @@ const TIERS: { id: PricingTier; name: string; sub: string; monthly: number; year
 ];
 
 export default function PricingTiers() {
+  const router = useRouter();
   const [interval, setInterval] = useState<Interval>("yearly");
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [pendingTier, setPendingTier] = useState<PricingTier | null>(null);
 
-  function startCheckout(tier: PricingTier) {
-    setError(null);
+  function startTrial(tier: PricingTier) {
     setPendingTier(tier);
-    start(async () => {
-      const result = await createCheckoutSessionAction(tier, interval);
-      if (result && result.ok === false) setError(result.error);
-      setPendingTier(null);
-    });
+    // Landing-page bezoekers zijn niet ingelogd — eerst signup, dan Stripe.
+    router.push(`/signup?tier=${tier}&interval=${interval}`);
   }
 
   return (
@@ -114,8 +109,8 @@ export default function PricingTiers() {
               </ul>
               <button
                 type="button"
-                onClick={() => startCheckout(t.id)}
-                disabled={pending}
+                onClick={() => startTrial(t.id)}
+                disabled={pendingTier !== null}
                 className={[
                   "mt-6 block w-full text-center text-sm font-semibold py-2.5 rounded-lg transition",
                   t.featured
@@ -123,19 +118,14 @@ export default function PricingTiers() {
                     : "bg-white/10 hover:bg-white/15 text-white disabled:opacity-50",
                 ].join(" ")}
               >
-                {pendingTier === t.id ? "Bezig..." : "Start 14-dagen trial"}
+                {pendingTier === t.id ? "Bezig..." : "Start 7-dagen trial"}
               </button>
             </div>
           );
         })}
       </div>
-      {error && (
-        <div className="mt-6 max-w-md mx-auto bg-red-500/10 border border-red-500/30 text-red-300 text-sm px-4 py-3 rounded-lg text-center">
-          {error}
-        </div>
-      )}
       <p className="text-center mt-8 text-[11px] text-white/45">
-        14 dagen gratis proberen — daarna opzegbaar per maand of jaar.
+        7 dagen gratis proberen — daarna opzegbaar per maand of jaar. Geen kosten tijdens trial.
       </p>
     </div>
   );

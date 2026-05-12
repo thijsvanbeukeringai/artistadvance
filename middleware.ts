@@ -7,6 +7,7 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const PUBLIC_PATHS = [
   "/landing",
   "/login",
+  "/signup",      // trial-signup vanaf landing
   "/auth/callback",
   "/portal",      // portal/[token]/*  — token serves as auth
   "/festival",    // festival/[token]/*
