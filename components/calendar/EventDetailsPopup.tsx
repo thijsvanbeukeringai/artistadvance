@@ -11,6 +11,7 @@ const HEADER_BG: Record<CalEvent["type"], string> = {
   interview: "bg-[#E91E63]",
   block: "bg-[#DC2626]",
   soundcheck: "bg-[#8B5CF6]",
+  reminder: "bg-[#0EA5E9]",
 };
 
 const HEADER_LABEL: Record<CalEvent["type"], string> = {
@@ -20,6 +21,7 @@ const HEADER_LABEL: Record<CalEvent["type"], string> = {
   interview: "Promo",
   block: "Block",
   soundcheck: "Soundcheck / programming",
+  reminder: "Reminder",
 };
 
 function fmtDate(iso?: string) {
@@ -113,7 +115,24 @@ function Body({ event }: { event: CalEvent }) {
     case "hotel":     return <HotelBody m={meta} />;
     case "travel":    return <TravelBody m={meta} />;
     case "soundcheck":return <TimelineBody m={meta} />;
+    case "reminder":  return <ReminderBody m={meta} />;
   }
+}
+
+function ReminderBody({ m }: { m: CalEventMeta & { kind: "reminder" } }) {
+  return (
+    <div className="space-y-3">
+      <KV label="Artist">{m.artistName}</KV>
+      <KV label="Wanneer">{fmtDate(m.datetime)} · {fmtTime(m.datetime)}</KV>
+      <div>
+        <div className="text-[10px] uppercase tracking-wider font-bold text-ink-500">Reminder</div>
+        <div className="text-lg font-bold text-ink-900 mt-0.5">{m.title}</div>
+      </div>
+      {m.notes && (
+        <div className="rounded-lg bg-ink-50 px-3 py-2 text-sm text-ink-700 whitespace-pre-wrap">{m.notes}</div>
+      )}
+    </div>
+  );
 }
 
 function ShowBody({ m }: { m: CalEventMeta & { kind: "show" } }) {

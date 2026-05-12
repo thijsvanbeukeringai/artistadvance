@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import EventDetailsPopup from "./EventDetailsPopup";
 import CalendarAgenda from "./CalendarAgenda";
 
-export type CalEventType = "show" | "hotel" | "travel" | "interview" | "block" | "soundcheck";
+export type CalEventType = "show" | "hotel" | "travel" | "interview" | "block" | "soundcheck" | "reminder";
 
 export type CalEventMeta =
   | { kind: "show"; advancingId: string; artistName: string; festivalName: string; stageName: string; venueLocation?: string; showTime?: string; setDuration?: number; doorsTime?: string; curfewTime?: string; status: string; fee?: number; programmingSlot?: string; soundcheckSlot?: string; }
   | { kind: "hotel"; advancingId: string; artistName: string; hotelName?: string; preference?: string; starRating?: string; roomCount?: number; roomType?: string; nights?: number; nightsDescription?: string; checkIn?: string; checkOut?: string; lateCheckout?: boolean; partySize?: number; roomAssignments?: { label: string; occupants: string[] }[]; travelingCrew: string[]; }
   | { kind: "travel"; advancingId: string; artistName: string; flightNumber: string; airline: string; departureAirport: string; arrivalAirport: string; departureDatetime: string; arrivalDatetime: string; passengers: string[]; status?: string; bookingReference?: string; direction: "inbound" | "outbound"; notes?: string; }
-  | { kind: "soundcheck"; advancingId: string; artistName: string; eventType: string; datetime: string; location?: string; responsibleContact?: string; notes?: string; };
+  | { kind: "soundcheck"; advancingId: string; artistName: string; eventType: string; datetime: string; location?: string; responsibleContact?: string; notes?: string; }
+  | { kind: "reminder"; advancingId: string; artistName: string; title: string; datetime: string; notes?: string; };
 
 export interface CalEvent {
   id: string;
@@ -36,6 +37,7 @@ const TYPE_BG: Record<CalEventType, string> = {
   interview:  "#E91E63",
   block:      "#DC2626",
   soundcheck: "#8B5CF6",
+  reminder:   "#0EA5E9",
 };
 
 function EventIcon({ type, size = 12 }: { type: CalEventType; size?: number }) {
@@ -90,6 +92,14 @@ function EventIcon({ type, size = 12 }: { type: CalEventType; size?: number }) {
         <svg {...common}>
           <circle cx="12" cy="12" r="10" />
           <path d="M5 5l14 14" />
+        </svg>
+      );
+    case "reminder":
+      // Bel (notification)
+      return (
+        <svg {...common}>
+          <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.7 21a2 2 0 01-3.4 0" />
         </svg>
       );
   }
@@ -438,6 +448,7 @@ function Legend() {
     { type: "soundcheck", label: "Soundcheck" },
     { type: "travel", label: "Vlucht" },
     { type: "hotel", label: "Hotel" },
+    { type: "reminder", label: "Reminder" },
     { type: "interview", label: "Promo" },
     { type: "block", label: "Block" },
   ];

@@ -156,10 +156,33 @@ export function buildCalendarEvents(
     }
   }
 
-  // TIMELINE events
+  // TIMELINE events (+ reminders die als event_type:"other" zijn opgeslagen)
   for (const [advId, items] of Object.entries(snap.timelineByAdvancing)) {
     if (!visibleAdvancingIds.has(advId)) continue;
     for (const t of items) {
+      // Reminder = timeline-event van type "other"; location bevat de titel.
+      if (t.event_type === "other") {
+        const title = t.location?.trim() || "Reminder";
+        const meta: CalEventMeta = {
+          kind: "reminder",
+          advancingId: advId,
+          artistName: artistOf(advId),
+          title,
+          datetime: t.datetime,
+          notes: t.notes,
+        };
+        events.push({
+          id: `rm_${t.id}`,
+          type: "reminder",
+          time: fmtTime(t.datetime),
+          title,
+          startDate: dateOnly(t.datetime),
+          endDate: dateOnly(t.datetime),
+          href: `/advancings/${advId}`,
+          meta,
+        });
+        continue;
+      }
       if (!(t.event_type in TIMELINE_LABEL)) continue;
       const label = TIMELINE_LABEL[t.event_type];
       const meta: CalEventMeta = {

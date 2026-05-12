@@ -1062,6 +1062,39 @@ export async function removeAdvancingFlightAction(advancingId: string, flightId:
   return { ok: true as const };
 }
 
+const HOTEL_FIELD_ALLOWED = new Set([
+  "hotel_required",
+  "hotel_preference",
+  "hotel_confirmed_name",
+  "hotel_star_rating",
+  "hotel_room_count",
+  "hotel_room_type",
+  "hotel_nights",
+  "hotel_nights_description",
+  "hotel_check_in",
+  "hotel_check_out",
+  "hotel_late_checkout",
+]);
+
+export async function setAdvancingHotelAction(
+  advancingId: string,
+  patch: Record<string, unknown>,
+) {
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (HOTEL_FIELD_ALLOWED.has(k)) clean[k] = v;
+  }
+  // Als er hotel-data binnenkomt, markeer hotel als benodigd.
+  if (Object.keys(clean).length > 0 && clean.hotel_required === undefined) {
+    clean.hotel_required = true;
+  }
+  await setSectionData(advancingId, "hotel", clean);
+  revalidatePath(`/advancings/${advancingId}`);
+  return { ok: true as const };
+}
+
 // ----------------------------------------------------------------------------
 // Booking-side flights (writes to advancing_flights; mirror to both views)
 // ----------------------------------------------------------------------------

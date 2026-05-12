@@ -11,6 +11,7 @@ const TYPE_COLOR: Record<CalEventType, string> = {
   interview: "bg-purple-500",
   block: "bg-red-500",
   soundcheck: "bg-amber-500",
+  reminder: "bg-sky-500",
 };
 
 const TYPE_LABEL: Record<CalEventType, string> = {
@@ -20,6 +21,7 @@ const TYPE_LABEL: Record<CalEventType, string> = {
   interview: "Interview",
   block: "Block",
   soundcheck: "Soundcheck",
+  reminder: "Reminder",
 };
 
 const WEEKDAY = ["zo", "ma", "di", "wo", "do", "vr", "za"];
