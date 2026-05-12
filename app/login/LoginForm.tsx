@@ -4,17 +4,45 @@ import { useState, useTransition } from "react";
 import { signInAction, signUpAction } from "./actions";
 
 type Mode = "signin" | "signup";
+type System = "agency" | "artist";
 
-export default function LoginForm({ next, initialMode }: { next: string; initialMode: Mode }) {
+const COPY: Record<System, { signinTitle: string; signinIntro: string; signupTitle: string; signupIntro: string; accent: string }> = {
+  agency: {
+    signinTitle: "Bookings Agency · Sign in",
+    signinIntro: "Toegang tot deal-flow, kalender en festivals.",
+    signupTitle: "Bookings Agency · Account aanmaken",
+    signupIntro: "De eerste account wordt super-admin. Daarna kun je via /admin nieuwe leden toevoegen.",
+    accent: "bg-ink-900 hover:bg-black",
+  },
+  artist: {
+    signinTitle: "Artist Team · Sign in",
+    signinIntro: "Toegang tot advancing, crew, riders en callsheets.",
+    signupTitle: "Artist Team · Account aanmaken",
+    signupIntro: "Voor productieleden van een artist. Vraag de agency-admin om een uitnodiging.",
+    accent: "bg-gradient-to-r from-violet-700 to-fuchsia-700 hover:from-violet-800 hover:to-fuchsia-800",
+  },
+};
+
+export default function LoginForm({
+  next,
+  initialMode,
+  system = "agency",
+}: {
+  next: string;
+  initialMode: Mode;
+  system?: System;
+}) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const copy = COPY[system];
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
     formData.set("next", next);
+    formData.set("system", system);
     start(async () => {
       const action = mode === "signin" ? signInAction : signUpAction;
       const result = await action(formData);
@@ -25,12 +53,10 @@ export default function LoginForm({ next, initialMode }: { next: string; initial
   return (
     <div className="bg-white border border-ink-200 rounded-2xl shadow-card p-6">
       <h1 className="text-xl font-extrabold text-ink-900">
-        {mode === "signin" ? "Sign in" : "Account aanmaken"}
+        {mode === "signin" ? copy.signinTitle : copy.signupTitle}
       </h1>
       <p className="text-xs text-ink-500 mt-1">
-        {mode === "signin"
-          ? "Toegang tot je workspace."
-          : "De eerste account wordt super-admin. Daarna kun je vanuit /admin nieuwe agency-leden toevoegen."}
+        {mode === "signin" ? copy.signinIntro : copy.signupIntro}
       </p>
 
       <form onSubmit={onSubmit} className="space-y-3 mt-5">
@@ -79,7 +105,7 @@ export default function LoginForm({ next, initialMode }: { next: string; initial
         <button
           type="submit"
           disabled={pending}
-          className="w-full px-3 py-2 rounded-lg bg-ink-900 text-white text-sm font-semibold hover:bg-black transition disabled:opacity-50"
+          className={`w-full px-3 py-2 rounded-lg text-white text-sm font-semibold transition disabled:opacity-50 ${copy.accent}`}
         >
           {pending ? "Bezig..." : mode === "signin" ? "Sign in" : "Account aanmaken"}
         </button>
@@ -100,6 +126,14 @@ export default function LoginForm({ next, initialMode }: { next: string; initial
               Sign in
             </button>
           </>
+        )}
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-ink-100 text-center text-[11px] text-ink-400">
+        {system === "agency" ? (
+          <>Werk je in het artist/advancing team? <a href="/login/artist" className="font-semibold text-violet-700 hover:underline">Login hier</a></>
+        ) : (
+          <>Werk je in de booking-agency? <a href="/login" className="font-semibold text-ink-900 hover:underline">Login hier</a></>
         )}
       </div>
     </div>

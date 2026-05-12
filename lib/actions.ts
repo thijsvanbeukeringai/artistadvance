@@ -690,6 +690,36 @@ export async function switchToArtistAction(artistId: string) {
   redirect("/");
 }
 
+/**
+ * Switch tussen systemen (Agency ↔ Artist). Auto-picks de juiste id:
+ * - agency: organization_id van de gebruiker
+ * - artist: eerste artist binnen de organisatie
+ * Alleen impersonatable users (super-admin / agency_admin) mogen switchen.
+ */
+export async function switchSystemAction(target: "agency" | "artist") {
+  const account = await readAccount();
+  if (!account.canImpersonate) return { ok: false as const, error: "Alleen super-admin of agency-admin mag van systeem switchen." };
+
+  const jar = cookies();
+  if (target === "agency") {
+    if (!account.organizationId) return { ok: false as const, error: "Geen organisatie gekoppeld." };
+    jar.set("aa_account_mode", "agency", COOKIE_OPTS);
+    jar.set("aa_account_id", account.organizationId, COOKIE_OPTS);
+  } else {
+    const { loadSnapshot } = await import("./snapshot");
+    const snap = await loadSnapshot();
+    const candidates = account.role === "super_admin"
+      ? snap.artists
+      : snap.artists.filter((a) => a.organization_id === account.organizationId);
+    const first = candidates[0];
+    if (!first) return { ok: false as const, error: "Geen artiest gevonden om naar over te schakelen." };
+    jar.set("aa_account_mode", "artist", COOKIE_OPTS);
+    jar.set("aa_account_id", first.id, COOKIE_OPTS);
+  }
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
 // Rider PDF parsing via Claude API
 export async function parseRiderAction(_artistId: string, formData: FormData) {
   const file = formData.get("rider") as File | null;

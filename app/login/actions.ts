@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { supabaseServer } from "@/lib/supabase-server";
 import { supabaseService } from "@/lib/supabase-service";
 
@@ -15,17 +16,48 @@ function safeRedirect(next: string): string {
   return next;
 }
 
+const COOKIE_MODE = "aa_account_mode";
+const COOKIE_ID = "aa_account_id";
+
+async function setSystemCookies(system: "agency" | "artist", authUserId: string) {
+  const jar = cookies();
+  const svc = supabaseService();
+  const { data: profile } = await svc
+    .from("users")
+    .select("organization_id, role")
+    .eq("auth_id", authUserId)
+    .maybeSingle();
+  const orgId = profile?.organization_id as string | null;
+
+  if (system === "artist") {
+    // Pak eerste artist van de gebruiker zijn organisatie (super-admin: eerste any-artist).
+    let q = svc.from("artists").select("id, organization_id").order("name").limit(1);
+    if (profile?.role !== "super_admin" && orgId) q = q.eq("organization_id", orgId);
+    const { data: artist } = await q.maybeSingle();
+    jar.set({ name: COOKIE_MODE, value: "artist", path: "/", sameSite: "lax", secure: true });
+    if (artist?.id) jar.set({ name: COOKIE_ID, value: artist.id, path: "/", sameSite: "lax", secure: true });
+    return;
+  }
+
+  // agency
+  jar.set({ name: COOKIE_MODE, value: "agency", path: "/", sameSite: "lax", secure: true });
+  if (orgId) jar.set({ name: COOKIE_ID, value: orgId, path: "/", sameSite: "lax", secure: true });
+}
+
 export async function signInAction(formData: FormData): Promise<AuthResult> {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
   const next = safeRedirect(String(formData.get("next") || "/"));
+  const systemRaw = String(formData.get("system") || "agency");
+  const system: "agency" | "artist" = systemRaw === "artist" ? "artist" : "agency";
   if (!email || !password) return { ok: false, error: "Email en wachtwoord verplicht." };
 
   const c = supabaseServer();
   if (!c) return { ok: false, error: "Supabase niet geconfigureerd." };
 
-  const { error } = await c.auth.signInWithPassword({ email, password });
+  const { data: signed, error } = await c.auth.signInWithPassword({ email, password });
   if (error) return { ok: false, error: error.message };
+  if (signed.user) await setSystemCookies(system, signed.user.id);
 
   revalidatePath("/", "layout");
   redirect(next);
@@ -69,15 +101,21 @@ export async function signUpAction(formData: FormData): Promise<AuthResult> {
     .maybeSingle();
   const organizationId = org?.id ?? null;
 
-  // Standaard: agency_member. Super-admin role MOET handmatig via DB worden gezet.
+  const systemRaw = String(formData.get("system") || "agency");
+  const system: "agency" | "artist" = systemRaw === "artist" ? "artist" : "agency";
+
+  // Standaard: agency_member voor agency-signup, advancing_member voor artist-signup.
+  // Super-admin role MOET handmatig via DB worden gezet.
   const { error: insertErr } = await svc.from("users").insert({
     auth_id: signed.user.id,
     organization_id: organizationId,
     name,
     email,
-    role: "agency_member",
+    role: system === "artist" ? "advancing_member" : "agency_member",
   });
   if (insertErr) return { ok: false, error: `Profiel aanmaken faalde: ${insertErr.message}` };
+
+  await setSystemCookies(system, signed.user.id);
 
   revalidatePath("/", "layout");
   redirect(next);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { SidebarGroup } from "./SidebarNav";
+import SwitchSystemLink from "./SwitchSystemLink";
 
 export default function MobileMenu({
   groups,
@@ -11,13 +12,16 @@ export default function MobileMenu({
   userEmail,
   userRole,
   mode,
+  canImpersonate,
 }: {
   groups: SidebarGroup[];
   userLabel: string;
   userEmail: string | null;
   userRole: string;
   mode: "artist" | "agency";
+  canImpersonate: boolean;
 }) {
+  const isArtist = mode === "artist";
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -69,8 +73,15 @@ export default function MobileMenu({
           <aside id="mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Navigatiemenu" className="absolute top-0 left-0 h-full w-[80%] max-w-xs bg-white shadow-2xl flex flex-col animate-slide-in motion-reduce:animate-none">
             <div className="flex items-center justify-between px-5 py-4 border-b border-ink-200">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-ink-900 text-white grid place-items-center text-sm font-bold">A</div>
-                <span className="font-extrabold tracking-tight text-ink-900">ArtistAdvance</span>
+                <div className={`w-8 h-8 rounded-lg text-white grid place-items-center text-sm font-bold ${
+                  isArtist ? "bg-gradient-to-br from-violet-700 to-fuchsia-700" : "bg-ink-900"
+                }`}>A</div>
+                <div className="leading-tight">
+                  <div className="font-extrabold tracking-tight text-ink-900 text-base">ArtistAdvance</div>
+                  <div className={`text-[9px] uppercase tracking-[0.18em] font-bold ${isArtist ? "text-violet-700" : "text-ink-500"}`}>
+                    {isArtist ? "Artist Team" : "Bookings Agency"}
+                  </div>
+                </div>
               </div>
               <button
                 type="button"
@@ -136,6 +147,12 @@ export default function MobileMenu({
                 </div>
               ))}
             </nav>
+
+            {canImpersonate && (
+              <div className="px-3 py-3 border-t border-ink-200">
+                <SwitchSystemLink mode={mode} />
+              </div>
+            )}
 
             <div className="px-4 py-3 border-t border-ink-200 text-xs">
               <div className="flex items-center gap-2 mb-1">

@@ -1,6 +1,6 @@
 import LoginForm from "./LoginForm";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: "Sign in · Bookings Agency" };
 export const dynamic = "force-dynamic";
 
 export default function LoginPage({
@@ -15,9 +15,15 @@ export default function LoginPage({
           <div className="w-9 h-9 rounded-xl bg-ink-900 text-white grid place-items-center font-extrabold">A</div>
           <span className="font-extrabold tracking-tight text-ink-900 text-lg">ArtistAdvance</span>
         </div>
+        <div className="mb-3 text-center">
+          <span className="inline-block text-[10px] uppercase tracking-[0.18em] font-bold bg-ink-900 text-white px-2 py-1 rounded">
+            Bookings Agency
+          </span>
+        </div>
         <LoginForm
           next={searchParams.next ?? "/"}
           initialMode={searchParams.mode === "signup" ? "signup" : "signin"}
+          system="agency"
         />
       </div>
     </div>

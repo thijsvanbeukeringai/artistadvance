@@ -13,7 +13,7 @@ export default async function AdminCompaniesPage() {
       <PageIntro
         eyebrow="Super-admin"
         title="Beheer agencies en artiesten"
-        description="Begin hier met setup. Een agency (= management-bedrijf) doet advancing voor één of meer artiesten."
+        description="Begin hier met setup. Een agency (= bookings-bureau) boekt één of meer artiesten op festivals. Het artist-team handelt de advancing per artiest af."
         steps={[
           { label: "Maak agency", description: "Bedrijfsnaam + optioneel Dropbox-pad." },
           { label: "Voeg artiesten toe", description: "Open een agency → 'Artiest toevoegen'." },

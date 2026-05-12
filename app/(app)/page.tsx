@@ -92,9 +92,9 @@ function AgencyDashboard({ snap, scopedArtistIds, allScopedIds, accountLabel, ro
             </div>
           </div>
           <div className="rounded-xl p-3 border bg-white border-ink-200">
-            <div className="text-[10px] uppercase tracking-wider font-bold text-ink-400">Advancing actief</div>
+            <div className="text-[10px] uppercase tracking-wider font-bold text-ink-400">Bevestigd</div>
             <div className="text-2xl font-extrabold text-ink-900 tabular-nums mt-1">{confirmedActive.length}</div>
-            <div className="text-[10px] text-ink-400 mt-0.5">overhandigd aan productie</div>
+            <div className="text-[10px] text-ink-400 mt-0.5">overhandigd aan artist-team</div>
           </div>
           <div className="rounded-xl p-3 border bg-white border-ink-200">
             <div className="text-[10px] uppercase tracking-wider font-bold text-ink-400">Komende 30 dagen</div>
@@ -144,7 +144,7 @@ function AgencyDashboard({ snap, scopedArtistIds, allScopedIds, accountLabel, ro
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <div>
               <h3 className="font-bold text-amber-900">Drafts wachten op confirm</h3>
-              <p className="text-[11px] text-amber-800 mt-0.5">Zodra je bevestigt start automatisch de advancing met crew, riders en defaults voor die artiest.</p>
+              <p className="text-[11px] text-amber-800 mt-0.5">Zodra je bevestigt gaat de show naar het artist-team met crew, riders en defaults al ingevuld.</p>
             </div>
             <span className="text-[11px] text-amber-700 tabular-nums">{drafts.length} draft{drafts.length === 1 ? "" : "s"}</span>
           </div>

@@ -15,6 +15,8 @@ const ICON = {
 };
 
 export function buildNavGroups(account: AccountContext): SidebarGroup[] {
+  // ARTIST-mode = ADVANCING-kant (productie-team werkt per artiest).
+  // AGENCY-mode = BOOKINGS-kant (deal-flow, geen advancing-noise).
   const isArtist = account.mode === "artist";
   const artistId = account.artistId;
   const hasAdvancing = canAccessAdvancing(account.role);
@@ -23,7 +25,10 @@ export function buildNavGroups(account: AccountContext): SidebarGroup[] {
     ? [
         { href: "/", label: "Dashboard", iconPath: ICON.dashboard },
         { href: `/artists/${artistId}/calendar`, label: "Kalender", iconPath: ICON.calendar },
-        { href: "/bookings", label: "Shows", iconPath: ICON.bookings },
+        ...(hasAdvancing ? [
+          { href: "/advancings", label: "Advancings", iconPath: ICON.advancings },
+          { href: "/tracker", label: "Production Tracker", iconPath: ICON.tracker },
+        ] : []),
         { href: `/artists/${artistId}/settings`, label: "Artist settings", iconPath: ICON.settings },
         { href: "/riders", label: "Signed Riders", iconPath: ICON.riders },
       ]
@@ -33,25 +38,14 @@ export function buildNavGroups(account: AccountContext): SidebarGroup[] {
         { href: "/bookings", label: "Boekingen", iconPath: ICON.bookings },
         { href: "/festivals", label: "Festivals CRM", iconPath: ICON.festival },
         { href: "/financial", label: "Financieel", iconPath: ICON.financial },
-        { href: "/riders", label: "Signed Riders", iconPath: ICON.riders },
       ];
 
   const groups: SidebarGroup[] = [
     {
-      section: isArtist ? `ARTIST · ${account.label.toUpperCase()}` : "BOOKINGS AGENCY",
+      section: isArtist ? `ARTIST · ${account.label.toUpperCase()} (ADVANCING)` : "BOOKINGS AGENCY",
       items: artistNav,
     },
   ];
-
-  if (hasAdvancing) {
-    groups.push({
-      section: "ADVANCING TEAM",
-      items: [
-        { href: "/advancings", label: "Advancings", iconPath: ICON.advancings },
-        { href: "/tracker", label: "Production Tracker", iconPath: ICON.tracker },
-      ],
-    });
-  }
 
   if (account.role === "super_admin") {
     groups.push({
@@ -76,4 +70,8 @@ export function buildNavGroups(account: AccountContext): SidebarGroup[] {
   });
 
   return groups;
+}
+
+export function otherSystemLabel(account: AccountContext): string {
+  return account.mode === "artist" ? "Switch naar Bookings Agency" : "Switch naar Artist Team";
 }

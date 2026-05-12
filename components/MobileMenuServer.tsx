@@ -12,6 +12,7 @@ export default async function MobileMenuServer() {
       userEmail={account.userEmail}
       userRole={account.role}
       mode={account.mode}
+      canImpersonate={account.canImpersonate}
     />
   );
 }
