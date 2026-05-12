@@ -11,6 +11,7 @@ import { computeReadiness } from "@/lib/readiness";
 import ReadinessPanel from "@/components/readiness/ReadinessPanel";
 import TouringPartyTable from "@/components/booking/TouringPartyTable";
 import TechItemsList from "@/components/tech/TechItemsList";
+import SyncTechFromTemplateButton from "@/components/tech/SyncTechFromTemplateButton";
 import ProgramTimeline from "@/components/program/ProgramTimeline";
 import AdvancingCalendar from "@/components/calendar/AdvancingCalendar";
 import { buildCalendarEvents } from "@/lib/calendarEvents";
@@ -161,7 +162,11 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
       )}
 
       {/* Tech items PLEASE CONFIRM */}
-      <div id="tech-items" className="scroll-mt-20">
+      <div id="tech-items" className="scroll-mt-20 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="font-bold text-ink-900">Tech requirements (PLEASE CONFIRM)</h3>
+          <SyncTechFromTemplateButton advancingId={advancing.id} />
+        </div>
         <TechItemsList items={detail.tech_items} />
       </div>
 

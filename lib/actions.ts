@@ -68,6 +68,7 @@ import {
   updateArtistContractTemplate,
   setBookingParkingMap,
   setBookingContractPdf,
+  syncAdvancingTechFromArtistTemplate,
 } from "./db";
 import { readAccount } from "./account";
 import { loadSnapshot } from "./snapshot";
@@ -1093,6 +1094,23 @@ export async function setAdvancingHotelAction(
   await setSectionData(advancingId, "hotel", clean);
   revalidatePath(`/advancings/${advancingId}`);
   return { ok: true as const };
+}
+
+/**
+ * Sync alle tech-requirement items van de artist-template naar deze advancing.
+ * Idempotent: bestaande items (op category+description) worden overgeslagen.
+ * Voor advancings die zijn aangemaakt voordat templates waren ingesteld.
+ */
+export async function syncAdvancingTechAction(advancingId: string) {
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  try {
+    const result = await syncAdvancingTechFromArtistTemplate(advancingId);
+    revalidatePath(`/advancings/${advancingId}`);
+    return { ok: true as const, inserted: result.inserted };
+  } catch (e) {
+    return { ok: false as const, error: (e as Error).message };
+  }
 }
 
 // ----------------------------------------------------------------------------

@@ -1112,6 +1112,55 @@ const SECTION_TYPES_LIST: SectionType[] = [
   "logistics","travel","hotel","hospitality","contacts","visa",
 ];
 
+/**
+ * Idempotente sync van artist tech-requirement templates naar advancing_tech_items.
+ * Slaat items over die al in de advancing staan (op item_description match).
+ * Gebruikt voor advancings die zijn aangemaakt vóór er templates waren.
+ */
+export async function syncAdvancingTechFromArtistTemplate(advancingId: string): Promise<{ inserted: number }> {
+  const c = client();
+
+  const { data: adv } = await c.from("advancings").select("id, booking_id").eq("id", advancingId).maybeSingle();
+  if (!adv) return { inserted: 0 };
+  const { data: booking } = await c.from("bookings").select("artist_id, show_type").eq("id", adv.booking_id).maybeSingle();
+  if (!booking) return { inserted: 0 };
+
+  const { data: tmpl } = await c.from("artist_tech_requirements")
+    .select("category, item_description, is_mandatory, notes, sort_order")
+    .eq("artist_id", booking.artist_id)
+    .eq("show_type", booking.show_type)
+    .order("sort_order", { ascending: true });
+  if (!tmpl || tmpl.length === 0) return { inserted: 0 };
+
+  const { data: existing } = await c.from("advancing_tech_items")
+    .select("category, item_description")
+    .eq("advancing_id", advancingId);
+  const existingKeys = new Set((existing ?? []).map((e: any) => `${e.category}::${e.item_description}`));
+
+  const newRows = tmpl
+    .filter((t: any) => !existingKeys.has(`${t.category}::${t.item_description}`))
+    .map((t: any) => ({
+      advancing_id: advancingId,
+      category: t.category,
+      item_description: t.item_description,
+      is_mandatory: t.is_mandatory,
+      artist_notes: t.notes,
+      status: "requested",
+      sort_order: t.sort_order,
+    }));
+
+  if (newRows.length === 0) return { inserted: 0 };
+
+  const { error } = await c.from("advancing_tech_items").insert(newRows);
+  if (error) throw error;
+
+  // Hersync section-statussen die door deze inserts kunnen wijzigen.
+  const categories = Array.from(new Set(newRows.map((r) => r.category as SectionType)));
+  await Promise.all(categories.map((cat) => syncSectionStatus(advancingId, cat)));
+
+  return { inserted: newRows.length };
+}
+
 export async function confirmBooking(bookingId: string): Promise<{ advancingId: string } | null> {
   const c = client();
 
