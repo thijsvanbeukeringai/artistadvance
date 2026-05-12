@@ -85,18 +85,34 @@ function buildActionQueue(readiness: ReadinessResult, portalToken?: string): Act
       .map((t) => sectionsByType.get(t))
       .filter((s): s is NonNullable<typeof s> => !!s && s.percent < 100);
 
+    // Tech-bucket: percentage komt uit advancing_tech_items.status. Items
+    // met status "requested" (= verstuurd naar festival, wachten op confirm)
+    // tellen voor 10%. Dus een lage tech-percent = WACHTEN OP FESTIVAL,
+    // niet management. Andere buckets zijn management-side (form-vullen).
+    const isFestivalSide = b.bucket === "tech";
+
     const subItems: SubAction[] = subs.map((s) => ({
       label: SECTION_LABELS[s.type] ?? s.type,
-      hint: s.percent > 0 ? `${s.percent}% klaar` : "nog niet ingevuld",
+      hint: s.percent > 0
+        ? (isFestivalSide ? `${s.percent}% — festival nog niet alle items bevestigd` : `${s.percent}% klaar`)
+        : (isFestivalSide ? "festival heeft nog niets bevestigd" : "nog niet ingevuld"),
       href: portalBase ? `${portalBase}/${s.type}` : undefined,
       tone: s.tone === "empty" ? "bad" : "warn",
     }));
 
     items.push({
-      label: b.percent === 0 ? `${b.label} sectie nog niet gestart` : `${b.label} op ${b.percent}%`,
-      detail: subs.length > 1
-        ? `${subs.length} sub-sectie${subs.length === 1 ? "" : "s"} open. Klik per stuk om de specs in te vullen.`
-        : "Open de sectie om de basisgegevens in te vullen.",
+      label: isFestivalSide
+        ? (b.percent === 0
+            ? `${b.label} — festival moet PLEASE CONFIRM nog invullen`
+            : `${b.label} op ${b.percent}% — wachten op festival`)
+        : (b.percent === 0
+            ? `${b.label} sectie nog niet gestart`
+            : `${b.label} op ${b.percent}%`),
+      detail: isFestivalSide
+        ? `${subs.length} sub-sectie${subs.length === 1 ? "" : "s"} wachten op confirms van het festival via de PLEASE CONFIRM lijst. Stuur de festival-portal link en herinner ze er aan.`
+        : (subs.length > 1
+            ? `${subs.length} sub-sectie${subs.length === 1 ? "" : "s"} open. Klik per stuk om de specs in te vullen.`
+            : "Open de sectie om de basisgegevens in te vullen."),
       tone: b.percent === 0 ? "bad" : "warn",
       // Als er maar één sub-sectie open is, link direct daar naartoe; anders gebruik subItems.
       href: subItems.length === 1 ? subItems[0].href : undefined,

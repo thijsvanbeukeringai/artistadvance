@@ -23,32 +23,70 @@ const TIMELINE_TYPES = [
   { v: "departure", l: "Departure" },
 ];
 
+export type AdvancingChoice = {
+  id: string;
+  /** "Hardwell · Tomorrowland · 2026-08-08" */
+  label: string;
+  /** YYYY-MM-DD van de show — gebruikt om closest match te vinden bij day-click. */
+  showDate?: string;
+};
+
+function pickClosest(advancings: AdvancingChoice[], clickedDate: string): string {
+  if (advancings.length === 1) return advancings[0].id;
+  // Vind advancing met show_date dichtst bij clicked date
+  const target = new Date(`${clickedDate}T00:00:00`).getTime();
+  let best = advancings[0];
+  let bestDiff = Number.POSITIVE_INFINITY;
+  for (const a of advancings) {
+    if (!a.showDate) continue;
+    const diff = Math.abs(new Date(`${a.showDate}T00:00:00`).getTime() - target);
+    if (diff < bestDiff) { best = a; bestDiff = diff; }
+  }
+  return best.id;
+}
+
 export default function AdvancingCalendar({
   events,
+  advancings,
   advancingId,
   emptyHint,
 }: {
   events: CalEvent[];
-  advancingId: string;
+  /** Lijst van advancings die de gebruiker kan koppelen aan een nieuw item. */
+  advancings?: AdvancingChoice[];
+  /** Backward-compat: één advancing zonder selector. */
+  advancingId?: string;
   emptyHint?: string;
 }) {
+  const choices: AdvancingChoice[] = advancings ?? (advancingId ? [{ id: advancingId, label: "Deze advancing" }] : []);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("menu");
+  const [selectedAdvancingId, setSelectedAdvancingId] = useState<string>(choices[0]?.id ?? "");
 
   function close() {
     setPickedDate(null);
     setMode("menu");
   }
 
+  function openOnDate(dateStr: string) {
+    setPickedDate(dateStr);
+    setMode("menu");
+    if (choices.length > 1) {
+      setSelectedAdvancingId(pickClosest(choices, dateStr));
+    } else if (choices.length === 1) {
+      setSelectedAdvancingId(choices[0].id);
+    }
+  }
+
+  const needsPicker = choices.length > 1;
+  const hasAdvancing = !!selectedAdvancingId;
+
   return (
     <>
       <MonthCalendar
         events={events}
         emptyHint={emptyHint}
-        onDayClick={(dateStr) => {
-          setPickedDate(dateStr);
-          setMode("menu");
-        }}
+        onDayClick={(dateStr) => openOnDate(dateStr)}
       />
 
       {pickedDate && (
@@ -64,8 +102,25 @@ export default function AdvancingCalendar({
               </div>
               <button type="button" onClick={close} className="text-xs text-ink-500 hover:text-ink-900 px-2 py-1 rounded">Sluiten</button>
             </header>
-            <div className="p-5">
-              {mode === "menu" && (
+            <div className="p-5 space-y-4">
+              {needsPicker && (
+                <label className="block">
+                  <span className="text-[10px] font-semibold text-ink-700 uppercase tracking-wider block">Aan welke show koppelen?</span>
+                  <select
+                    value={selectedAdvancingId}
+                    onChange={(e) => setSelectedAdvancingId(e.target.value)}
+                    className="mt-1 w-full px-2.5 py-1.5 rounded-md border border-ink-200 text-sm bg-white"
+                  >
+                    {choices.map((c) => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {!hasAdvancing ? (
+                <div className="text-sm text-ink-500 italic">Geen advancings beschikbaar — bevestig eerst een booking.</div>
+              ) : mode === "menu" ? (
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -104,12 +159,12 @@ export default function AdvancingCalendar({
                     <div className="text-[11px] text-ink-500 mt-1">Vrije notitie of taak op een datum.</div>
                   </button>
                 </div>
-              )}
+              ) : null}
 
-              {mode === "flight" && <FlightForm date={pickedDate} advancingId={advancingId} onDone={close} />}
-              {mode === "hotel" && <HotelForm date={pickedDate} advancingId={advancingId} onDone={close} />}
-              {mode === "timeline" && <TimelineForm date={pickedDate} advancingId={advancingId} onDone={close} />}
-              {mode === "reminder" && <ReminderForm date={pickedDate} advancingId={advancingId} onDone={close} />}
+              {hasAdvancing && mode === "flight" && <FlightForm date={pickedDate} advancingId={selectedAdvancingId} onDone={close} />}
+              {hasAdvancing && mode === "hotel" && <HotelForm date={pickedDate} advancingId={selectedAdvancingId} onDone={close} />}
+              {hasAdvancing && mode === "timeline" && <TimelineForm date={pickedDate} advancingId={selectedAdvancingId} onDone={close} />}
+              {hasAdvancing && mode === "reminder" && <ReminderForm date={pickedDate} advancingId={selectedAdvancingId} onDone={close} />}
             </div>
           </div>
         </div>

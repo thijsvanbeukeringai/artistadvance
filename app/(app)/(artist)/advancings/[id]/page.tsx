@@ -17,8 +17,6 @@ import { findAdvancingDetail, loadSnapshot } from "@/lib/snapshot";
 import AdvancingTabs, { type AdvancingTab } from "@/components/advancing/AdvancingTabs";
 import FestivalPortalVisibility from "@/components/advancing/FestivalPortalVisibility";
 import FlightsManager from "@/components/advancing/FlightsManager";
-import AdvancingCalendar from "@/components/calendar/AdvancingCalendar";
-import { buildCalendarEvents } from "@/lib/calendarEvents";
 
 const ICON = {
   tech: "M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z",
@@ -180,21 +178,6 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
         advancingId={advancing.id}
         initialHidden={(advancing.festival_portal_hidden ?? []) as any}
       />
-
-      {/* Quick-add calendar — klik een dag voor vlucht/hotel/programma/reminder */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h3 className="font-bold text-ink-900">Kalender</h3>
-            <p className="text-[11px] text-ink-500 mt-0.5">Klik op een dag om snel een vlucht, hotel, programma-item of reminder toe te voegen.</p>
-          </div>
-        </div>
-        <AdvancingCalendar
-          events={buildCalendarEvents(snap, new Set([booking.artist_id]), "artist")}
-          advancingId={advancing.id}
-          emptyHint="Voeg vluchten, hotels of programma-items toe door op een dag te klikken."
-        />
-      </section>
 
       {/* Program timeline */}
       <ProgramTimeline
