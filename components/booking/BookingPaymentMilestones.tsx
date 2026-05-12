@@ -67,7 +67,7 @@ export default function BookingPaymentMilestones({
             <button
               type="button"
               onClick={() => setAdding(true)}
-              className="text-xs font-semibold text-brand-600 hover:underline"
+              className="text-xs font-semibold text-brand-700 hover:underline"
             >
               + Milestone toevoegen
             </button>

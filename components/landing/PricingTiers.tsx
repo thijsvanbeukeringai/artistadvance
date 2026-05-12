@@ -2,19 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { createCheckoutSessionAction } from "@/lib/billing";
+import type { PricingTier } from "@/lib/stripe";
 
 type Interval = "monthly" | "yearly";
 
-const TIERS = [
+const TIERS: { id: PricingTier; name: string; sub: string; monthly: number; yearly: number; bullets: string[]; featured: boolean }[] = [
   {
+    id: "starter",
     name: "Starter",
     sub: "1-5 artiesten",
     monthly: 49,
-    yearly: 470, // 49 * 12 * 0.80 ≈ 20% off
+    yearly: 470,
     bullets: ["Bookings + advancing", "Festivals CRM", "Financial dashboard", "Email support"],
     featured: false,
   },
   {
+    id: "agency",
     name: "Agency",
     sub: "6-25 artiesten",
     monthly: 149,
@@ -23,6 +26,7 @@ const TIERS = [
     featured: true,
   },
   {
+    id: "group",
     name: "Group",
     sub: "25+ artiesten / multi-label",
     monthly: 399,
@@ -36,12 +40,15 @@ export default function PricingTiers() {
   const [interval, setInterval] = useState<Interval>("yearly");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [pendingTier, setPendingTier] = useState<PricingTier | null>(null);
 
-  function startCheckout() {
+  function startCheckout(tier: PricingTier) {
     setError(null);
+    setPendingTier(tier);
     start(async () => {
-      const result = await createCheckoutSessionAction(interval);
+      const result = await createCheckoutSessionAction(tier, interval);
       if (result && result.ok === false) setError(result.error);
+      setPendingTier(null);
     });
   }
 
@@ -107,7 +114,7 @@ export default function PricingTiers() {
               </ul>
               <button
                 type="button"
-                onClick={startCheckout}
+                onClick={() => startCheckout(t.id)}
                 disabled={pending}
                 className={[
                   "mt-6 block w-full text-center text-sm font-semibold py-2.5 rounded-lg transition",
@@ -116,7 +123,7 @@ export default function PricingTiers() {
                     : "bg-white/10 hover:bg-white/15 text-white disabled:opacity-50",
                 ].join(" ")}
               >
-                {pending ? "Bezig..." : "Start 14-dagen trial"}
+                {pendingTier === t.id ? "Bezig..." : "Start 14-dagen trial"}
               </button>
             </div>
           );

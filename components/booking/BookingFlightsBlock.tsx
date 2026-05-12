@@ -51,7 +51,7 @@ export default function BookingFlightsBlock({
         {adding ? (
           <AddForm bookingId={bookingId} onClose={() => setAdding(false)} />
         ) : (
-          <button type="button" onClick={() => setAdding(true)} className="text-xs font-semibold text-brand-600 hover:underline">+ Vlucht toevoegen</button>
+          <button type="button" onClick={() => setAdding(true)} className="text-xs font-semibold text-brand-700 hover:underline">+ Vlucht toevoegen</button>
         )}
       </div>
     </section>
@@ -136,7 +136,7 @@ function FlightRow({ flight, bookingId }: { flight: FlightInfo; bookingId: strin
             {flight.paid_by && <span>betaald door <span className="font-semibold">{flight.paid_by}</span></span>}
             {flight.recharge_to_buyer && <span className="text-emerald-700 font-semibold">↪ doorbelast</span>}
           </div>
-          <button type="button" onClick={() => setEditing(true)} className="text-brand-600 hover:underline">commercieel bewerken</button>
+          <button type="button" onClick={() => setEditing(true)} className="text-brand-700 hover:underline">commercieel bewerken</button>
         </div>
       )}
     </div>

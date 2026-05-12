@@ -3,10 +3,15 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { findAdvancingDetail, loadSnapshot } from "@/lib/snapshot";
 import { CallsheetPDF } from "@/lib/pdf/CallsheetPDF";
+import { requireAdvancingAccess } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  const az = await requireAdvancingAccess(params.id);
+  if (!az.ok) {
+    return NextResponse.json({ error: az.error }, { status: 401 });
+  }
   const snap = await loadSnapshot();
   const detail = findAdvancingDetail(snap, params.id);
   if (!detail) {

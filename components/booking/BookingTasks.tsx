@@ -35,7 +35,7 @@ export default function BookingTasks({ bookingId, tasks }: { bookingId: string; 
         {adding ? (
           <AddTask bookingId={bookingId} onClose={() => setAdding(false)} />
         ) : (
-          <button type="button" onClick={() => setAdding(true)} className="text-xs font-semibold text-brand-600 hover:underline">
+          <button type="button" onClick={() => setAdding(true)} className="text-xs font-semibold text-brand-700 hover:underline">
             + Taak toevoegen
           </button>
         )}

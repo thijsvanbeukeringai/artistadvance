@@ -20,7 +20,7 @@ export default function BookingCrewMirror({
           <p className="text-[11px] text-ink-500 mt-0.5">Aangemeld door het advancing-team — hier read-only zichtbaar zodat je weet wie er komt voor accreditatie/guestlist.</p>
         </div>
         {advancingAccess && advancingId && (
-          <Link href={`/advancings/${advancingId}`} className="text-xs font-semibold text-brand-600 hover:underline">
+          <Link href={`/advancings/${advancingId}`} className="text-xs font-semibold text-brand-700 hover:underline">
             Beheer in advancing →
           </Link>
         )}

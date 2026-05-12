@@ -143,7 +143,7 @@ function RiderRow({ token, rider }: { token: string; rider: SignedRider }) {
               </div>
               <div className="mt-2 flex items-center gap-2">
                 {signedUrl ? (
-                  <a href={signedUrl} target="_blank" rel="noopener" className="text-xs font-semibold text-brand-600 hover:underline">
+                  <a href={signedUrl} target="_blank" rel="noopener" className="text-xs font-semibold text-brand-700 hover:underline">
                     Open document →
                   </a>
                 ) : (

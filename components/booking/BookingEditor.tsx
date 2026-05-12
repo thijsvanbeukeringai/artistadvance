@@ -325,7 +325,7 @@ export default function BookingEditor({
       </section>
 
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800">{error}</div>
+        <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800">{error}</div>
       )}
 
       <div className="flex items-center justify-end gap-3 sticky bottom-3 z-10">

@@ -30,7 +30,7 @@ export default function AttentionList({ items }: { items: AttentionItem[] }) {
           <h3 className="font-bold text-ink-900">Aandacht nodig</h3>
           <span className="text-xs text-ink-400 ml-1">top {items.length}</span>
         </div>
-        <Link href="/advancings" className="text-xs font-semibold text-brand-600 hover:underline">Bekijk alles</Link>
+        <Link href="/advancings" className="text-xs font-semibold text-brand-700 hover:underline">Bekijk alles</Link>
       </header>
       <ul className="divide-y divide-ink-200">
         {items.map((item) => (

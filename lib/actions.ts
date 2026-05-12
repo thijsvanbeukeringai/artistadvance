@@ -71,7 +71,7 @@ import {
 } from "./db";
 import { readAccount } from "./account";
 import { loadSnapshot } from "./snapshot";
-import { requireBookingAccess, requireArtistAccess, requireFestivalAccess } from "./authz";
+import { requireBookingAccess, requireArtistAccess, requireFestivalAccess, requireAdvancingAccess } from "./authz";
 import type {
   ArtistHospitalityDefaults,
   ArtistHotelDefaults,
@@ -305,10 +305,27 @@ export async function removeFestivalCrmContactAction(contactId: string, festival
   return { ok: true as const };
 }
 
+/** Toegestane velden voor updateBookingAction (mass-assignment bescherming). */
+const UPDATE_BOOKING_ALLOWED = new Set([
+  "festival_id", "stage_id", "show_type", "show_date", "show_time", "set_duration_minutes",
+  "fee", "guarantee", "contributions", "contract_status", "is_looped",
+  "venue_address", "venue_postcode", "venue_city", "venue_country",
+  "parking_info", "parking_map_url",
+  "billing_position", "slot_position", "b2b_partner",
+  "commission_pct", "vat_pct", "withholding_tax_pct", "travel_buyout", "hotel_buyout",
+  "hold_position", "hold_status", "hold_expires_at",
+  "radius_km", "radius_days_before", "radius_days_after", "exclusivity_type",
+]);
+
 export async function updateBookingAction(bookingId: string, patch: Record<string, unknown>) {
   const az = await requireBookingAccess(bookingId);
   if (!az.ok) return { ok: false as const, error: az.error };
-  await updateBooking(bookingId, patch);
+  // Whitelist: blokkeer status/confirmed_at/organization_id/etc.
+  const safe: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (UPDATE_BOOKING_ALLOWED.has(k)) safe[k] = v;
+  }
+  await updateBooking(bookingId, safe);
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/bookings");
   revalidatePath("/");
@@ -689,6 +706,8 @@ export async function importParsedTechItemsAction(
   showType: ShowType,
   items: { category: TechCategory; item_description: string; is_mandatory: boolean; artist_notes?: string }[],
 ) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   let added = 0;
   for (const item of items) {
     if (!item.item_description?.trim()) continue;
@@ -707,6 +726,8 @@ export async function importParsedTechItemsAction(
 }
 
 export async function addTechRequirementAction(artistId: string, formData: FormData) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   const description = String(formData.get("item_description") || "").trim();
   if (!description) return { ok: false, error: "Beschrijving verplicht" };
   await addTechRequirement({
@@ -722,12 +743,16 @@ export async function addTechRequirementAction(artistId: string, formData: FormD
 }
 
 export async function updateTechRequirementAction(id: string, artistId: string, patch: { item_description?: string; is_mandatory?: boolean; notes?: string; category?: TechCategory }) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await updateTechRequirement(id, patch);
   revalidatePath(`/artists/${artistId}/templates`);
   return { ok: true };
 }
 
 export async function removeTechRequirementAction(id: string, artistId: string) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await removeTechRequirement(id);
   revalidatePath(`/artists/${artistId}/templates`);
   return { ok: true };
@@ -735,6 +760,8 @@ export async function removeTechRequirementAction(id: string, artistId: string) 
 
 // Trigger 1 - booking confirmed pipeline
 export async function confirmBookingAction(bookingId: string) {
+  const az = await requireBookingAccess(bookingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   const result = await confirmBooking(bookingId);
   revalidatePath("/bookings");
   revalidatePath("/advancings");
@@ -931,10 +958,12 @@ export async function setVisaCrewStatusAction(token: string, crewId: string, sta
 
 // Touring party - edit crew row + add/remove flight on backoffice advancing detail.
 export async function updateBookingCrewAction(crewId: string, advancingId: string, patch: { is_traveling?: boolean; needs_flight?: boolean; flight_status?: string; notes?: string }) {
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await updateBookingCrew(crewId, patch);
   revalidatePath(`/advancings/${advancingId}`);
   revalidatePath("/tracker");
-  return { ok: true };
+  return { ok: true as const };
 }
 
 // Touring party - voeg crew toe aan een bestaande booking (uit artist defaults of ad-hoc)
@@ -945,18 +974,22 @@ export async function addBookingCrewAction(bookingId: string, advancingId: strin
   is_traveling?: boolean;
   needs_flight?: boolean;
 }) {
-  if (!payload.name.trim()) return { ok: false, error: "Naam verplicht" };
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  if (!payload.name.trim()) return { ok: false as const, error: "Naam verplicht" };
   await addBookingCrewMember(bookingId, payload);
   revalidatePath(`/advancings/${advancingId}`);
   revalidatePath("/tracker");
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function removeBookingCrewAction(crewId: string, advancingId: string) {
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await removeBookingCrewMember(crewId);
   revalidatePath(`/advancings/${advancingId}`);
   revalidatePath("/tracker");
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function addAdvancingFlightAction(advancingId: string, payload: {
@@ -972,6 +1005,8 @@ export async function addAdvancingFlightAction(advancingId: string, payload: {
   notes?: string;
   status?: "pending" | "booked" | "confirmed";
 }) {
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await addFlight(advancingId, {
     direction: payload.direction,
     flight_number: payload.flight_number,
@@ -986,13 +1021,15 @@ export async function addAdvancingFlightAction(advancingId: string, payload: {
     status: payload.status ?? "pending",
   });
   revalidatePath(`/advancings/${advancingId}`);
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function removeAdvancingFlightAction(advancingId: string, flightId: string) {
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await removeFlight(advancingId, flightId);
   revalidatePath(`/advancings/${advancingId}`);
-  return { ok: true };
+  return { ok: true as const };
 }
 
 // ----------------------------------------------------------------------------
@@ -1041,11 +1078,21 @@ export async function addBookingFlightAction(bookingId: string, payload: {
   return { ok: true as const };
 }
 
+const UPDATE_FLIGHT_ALLOWED = new Set([
+  "direction", "flight_number", "airline", "departure_airport", "arrival_airport",
+  "departure_datetime", "arrival_datetime", "passengers", "booking_reference", "notes",
+  "status", "cost_amount", "paid_by", "recharge_to_buyer",
+]);
+
 export async function updateBookingFlightAction(bookingId: string, flightId: string, patch: Record<string, unknown>) {
   const az = await requireBookingAccess(bookingId);
   if (!az.ok) return { ok: false as const, error: az.error };
+  const safe: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (UPDATE_FLIGHT_ALLOWED.has(k)) safe[k] = v;
+  }
   const { updateFlight } = await import("./db");
-  await updateFlight(flightId, patch as any);
+  await updateFlight(flightId, safe as any);
   const snap = await loadSnapshot();
   const booking = snap.bookings.find((b) => b.id === bookingId);
   const advancing = booking ? snap.advancings.find((a) => a.booking_id === bookingId) : null;
@@ -1068,13 +1115,19 @@ export async function removeBookingFlightAction(bookingId: string, flightId: str
 
 // Program timeline - generic add/update/remove werkt voor zowel backoffice (advancingId)
 // als portal/festival (via getAdvancingByToken).
-async function resolveAdvancingId(advancingId?: string, token?: string): Promise<string | null> {
-  if (advancingId) return advancingId;
+async function resolveAdvancingId(advancingId?: string, token?: string): Promise<{ id: string | null; error?: string }> {
   if (token) {
+    // Token-pad: secret token zelf is de auth — geen extra check nodig.
     const adv = await getAdvancingByToken(token);
-    return adv?.id ?? null;
+    return { id: adv?.id ?? null, error: adv ? undefined : "Token niet gevonden" };
   }
-  return null;
+  if (advancingId) {
+    // AdvancingId-pad: vereist ingelogde user met eigenaarschap.
+    const az = await requireAdvancingAccess(advancingId);
+    if (!az.ok) return { id: null, error: az.error };
+    return { id: advancingId };
+  }
+  return { id: null, error: "Geen advancingId of token meegegeven" };
 }
 
 function revalidateAllForAdvancing(advancingId: string, token?: string) {
@@ -1095,8 +1148,9 @@ export async function addTimelineEventAction(input: {
   responsible_contact?: string;
   notes?: string;
 }) {
-  const advId = await resolveAdvancingId(input.advancingId, input.token);
-  if (!advId) return { ok: false, error: "Geen advancing gevonden" };
+  const res = await resolveAdvancingId(input.advancingId, input.token);
+  if (!res.id) return { ok: false, error: res.error ?? "Geen advancing gevonden" };
+  const advId = res.id;
   await addTimelineEvent(advId, {
     event_type: input.event_type,
     datetime: input.datetime,
@@ -1120,16 +1174,18 @@ export async function updateTimelineEventAction(input: {
     notes?: string;
   };
 }) {
-  const advId = await resolveAdvancingId(input.advancingId, input.token);
-  if (!advId) return { ok: false, error: "Geen advancing gevonden" };
+  const res = await resolveAdvancingId(input.advancingId, input.token);
+  if (!res.id) return { ok: false, error: res.error ?? "Geen advancing gevonden" };
+  const advId = res.id;
   await updateTimelineEvent(input.id, input.patch);
   revalidateAllForAdvancing(advId, input.token);
   return { ok: true };
 }
 
 export async function removeTimelineEventAction(input: { id: string; advancingId?: string; token?: string }) {
-  const advId = await resolveAdvancingId(input.advancingId, input.token);
-  if (!advId) return { ok: false, error: "Geen advancing gevonden" };
+  const res = await resolveAdvancingId(input.advancingId, input.token);
+  if (!res.id) return { ok: false, error: res.error ?? "Geen advancing gevonden" };
+  const advId = res.id;
   await removeTimelineEvent(input.id);
   revalidateAllForAdvancing(advId, input.token);
   return { ok: true };
@@ -1137,9 +1193,11 @@ export async function removeTimelineEventAction(input: { id: string; advancingId
 
 // Hotel room-indeling
 export async function setRoomAssignmentsAction(advancingId: string, assignments: HotelRoomAssignment[]) {
+  const az = await requireAdvancingAccess(advancingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await setRoomAssignments(advancingId, assignments);
   revalidatePath(`/advancings/${advancingId}`);
-  return { ok: true };
+  return { ok: true as const };
 }
 
 // Ground transfers - werkt voor zowel backoffice (advancingId) als festival portal (token)
@@ -1164,8 +1222,9 @@ export async function addGroundTransferAction(input: {
     created_by_role?: string;
   };
 }) {
-  const advId = await resolveAdvancingId(input.advancingId, input.token);
-  if (!advId) return { ok: false, error: "Geen advancing gevonden" };
+  const res = await resolveAdvancingId(input.advancingId, input.token);
+  if (!res.id) return { ok: false, error: res.error ?? "Geen advancing gevonden" };
+  const advId = res.id;
   await addGroundTransfer(advId, input.payload);
   revalidateAllForAdvancing(advId, input.token);
   return { ok: true };
@@ -1177,16 +1236,18 @@ export async function updateGroundTransferAction(input: {
   token?: string;
   patch: Parameters<typeof updateGroundTransfer>[1];
 }) {
-  const advId = await resolveAdvancingId(input.advancingId, input.token);
-  if (!advId) return { ok: false, error: "Geen advancing gevonden" };
+  const res = await resolveAdvancingId(input.advancingId, input.token);
+  if (!res.id) return { ok: false, error: res.error ?? "Geen advancing gevonden" };
+  const advId = res.id;
   await updateGroundTransfer(input.id, input.patch);
   revalidateAllForAdvancing(advId, input.token);
   return { ok: true };
 }
 
 export async function removeGroundTransferAction(input: { id: string; advancingId?: string; token?: string }) {
-  const advId = await resolveAdvancingId(input.advancingId, input.token);
-  if (!advId) return { ok: false, error: "Geen advancing gevonden" };
+  const res = await resolveAdvancingId(input.advancingId, input.token);
+  if (!res.id) return { ok: false, error: res.error ?? "Geen advancing gevonden" };
+  const advId = res.id;
   await removeGroundTransfer(input.id);
   revalidateAllForAdvancing(advId, input.token);
   return { ok: true };
@@ -1199,10 +1260,12 @@ export async function setArtistDefaultsAction(artistId: string, patch: {
   defaults_travel?: ArtistTravelDefaults | null;
   defaults_logistics?: ArtistLogisticsDefaults | null;
 }) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await setArtistDefaults(artistId, patch);
   revalidatePath(`/artists/${artistId}/settings`);
   revalidatePath(`/artists/${artistId}`);
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function addArtistCrewAction(artistId: string, payload: {
@@ -1212,11 +1275,13 @@ export async function addArtistCrewAction(artistId: string, payload: {
   phone?: string;
   is_default?: boolean;
 }) {
-  if (!payload.name.trim()) return { ok: false, error: "Naam verplicht" };
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  if (!payload.name.trim()) return { ok: false as const, error: "Naam verplicht" };
   await addArtistCrewMember(artistId, payload);
   revalidatePath(`/artists/${artistId}/settings`);
   revalidatePath(`/artists/${artistId}`);
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function updateArtistCrewAction(crewId: string, artistId: string, patch: {
@@ -1226,20 +1291,30 @@ export async function updateArtistCrewAction(crewId: string, artistId: string, p
   phone?: string | null;
   is_default?: boolean;
 }) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await updateArtistCrewMember(crewId, patch);
   revalidatePath(`/artists/${artistId}/settings`);
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function removeArtistCrewAction(crewId: string, artistId: string) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await removeArtistCrewMember(crewId);
   revalidatePath(`/artists/${artistId}/settings`);
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function createArtistAction(orgId: string, formData: FormData) {
+  const account = await readAccount();
+  if (account.role === "guest") return { ok: false as const, error: "Niet aangemeld." };
+  // Alleen super_admin of agency_admin/member van eigen org mag artiesten toevoegen
+  if (account.role !== "super_admin" && account.organizationId !== orgId) {
+    return { ok: false as const, error: "Geen toegang tot deze organisatie." };
+  }
   const name = String(formData.get("name") || "").trim();
-  if (!name) return { ok: false, error: "Naam is verplicht" };
+  if (!name) return { ok: false as const, error: "Naam is verplicht" };
   await createArtist({
     name,
     organization_id: orgId,
@@ -1251,7 +1326,7 @@ export async function createArtistAction(orgId: string, formData: FormData) {
   revalidatePath(`/admin/companies/${orgId}`);
   revalidatePath("/admin/companies");
   revalidatePath("/artists");
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function updateArtistManagerAction(artistId: string, patch: {
@@ -1259,8 +1334,10 @@ export async function updateArtistManagerAction(artistId: string, patch: {
   manager_email?: string | null;
   manager_phone?: string | null;
 }) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
   await updateArtist(artistId, patch);
   revalidatePath(`/artists/${artistId}`);
   revalidatePath(`/artists/${artistId}/settings`);
-  return { ok: true };
+  return { ok: true as const };
 }

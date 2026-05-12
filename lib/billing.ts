@@ -4,9 +4,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { readAccount } from "./account";
 import { supabaseService } from "./supabase-service";
-import { stripeClient, STRIPE_PRICES, isStripeConfigured } from "./stripe";
-
-type BillingInterval = "monthly" | "yearly";
+import { stripeClient, priceIdFor, isStripeConfigured, type BillingInterval, type PricingTier } from "./stripe";
 
 /** Maak (of hergebruik) Stripe customer voor deze organisatie. */
 async function ensureStripeCustomer(organizationId: string, email: string | null): Promise<string> {
@@ -38,7 +36,7 @@ async function ensureStripeCustomer(organizationId: string, email: string | null
   return customer.id;
 }
 
-export async function createCheckoutSessionAction(interval: BillingInterval) {
+export async function createCheckoutSessionAction(tier: PricingTier, interval: BillingInterval) {
   if (!isStripeConfigured()) {
     return { ok: false as const, error: "Billing nog niet geconfigureerd. Vraag de bouwer om Stripe-keys + price IDs." };
   }
@@ -49,8 +47,12 @@ export async function createCheckoutSessionAction(interval: BillingInterval) {
     return { ok: false as const, error: "Alleen agency-admins mogen abonnement starten." };
   }
 
+  const priceId = priceIdFor(tier, interval);
+  if (!priceId) {
+    return { ok: false as const, error: `Geen prijs geconfigureerd voor ${tier} ${interval}. Vraag de bouwer om de juiste Stripe price ID.` };
+  }
+
   const customerId = await ensureStripeCustomer(account.organizationId, account.userEmail);
-  const priceId = interval === "yearly" ? STRIPE_PRICES.yearly : STRIPE_PRICES.monthly;
 
   const hdrs = headers();
   const protocol = hdrs.get("x-forwarded-proto") ?? "https";

@@ -302,7 +302,7 @@ export default function AgencyBookingPanel({
               <button
                 type="button"
                 onClick={() => setShowNewContact((v) => !v)}
-                className="text-xs font-semibold text-brand-600 hover:bg-brand-50 px-2 py-1 rounded whitespace-nowrap"
+                className="text-xs font-semibold text-brand-700 hover:bg-brand-50 px-2 py-1 rounded whitespace-nowrap"
               >
                 {showNewContact ? "Annuleren" : "+ Nieuw contact"}
               </button>
@@ -315,7 +315,7 @@ export default function AgencyBookingPanel({
       )}
 
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-800">
+        <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-800">
           {error}
         </div>
       )}

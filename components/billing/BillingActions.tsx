@@ -19,7 +19,9 @@ export default function BillingActions({
   function startCheckout(interval: "monthly" | "yearly") {
     setError(null);
     start(async () => {
-      const result = await createCheckoutSessionAction(interval);
+      // BillingActions wijst standaard naar de Agency-tier (mid). Voor
+      // andere tiers gebruik de Pricing-page op /landing#pricing.
+      const result = await createCheckoutSessionAction("agency", interval);
       if (result && result.ok === false) setError(result.error);
     });
   }

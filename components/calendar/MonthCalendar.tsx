@@ -326,26 +326,39 @@ export default function MonthCalendar({
                 const cur = isCurrent(d);
                 const todayFlag = isToday(d);
                 const dateStr = toISO(d);
+                const cellClasses = `relative border-r border-ink-200 px-2 pt-1.5 ${
+                  cur ? "bg-white" : "bg-ink-50/60"
+                } ${col === 6 ? "border-r-0" : ""}`;
+                const inner = (
+                  <div className="flex items-center justify-between">
+                    <div className={`text-xs ${
+                      todayFlag ? "inline-flex items-center justify-center w-5 h-5 rounded-full bg-ink-900 text-white font-bold"
+                      : cur ? "text-ink-700 font-semibold"
+                      : "text-ink-400"
+                    }`}>{d.getDate()}</div>
+                    {onDayClick && (
+                      <span className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 text-[10px] font-bold text-brand-700 bg-white border border-brand-300 rounded px-1" aria-hidden="true">
+                        +
+                      </span>
+                    )}
+                  </div>
+                );
+                if (onDayClick) {
+                  return (
+                    <button
+                      key={col}
+                      type="button"
+                      onClick={() => onDayClick(dateStr)}
+                      aria-label={`Voeg toe op ${d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`}
+                      className={`${cellClasses} text-left w-full cursor-pointer hover:bg-brand-50 group focus-visible:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-inset`}
+                    >
+                      {inner}
+                    </button>
+                  );
+                }
                 return (
-                  <div
-                    key={col}
-                    onClick={onDayClick ? () => onDayClick(dateStr) : undefined}
-                    className={`relative border-r border-ink-200 px-2 pt-1.5 ${
-                      cur ? "bg-white" : "bg-ink-50/60"
-                    } ${col === 6 ? "border-r-0" : ""} ${onDayClick ? "cursor-pointer hover:bg-brand-50 group" : ""}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className={`text-xs ${
-                        todayFlag ? "inline-flex items-center justify-center w-5 h-5 rounded-full bg-ink-900 text-white font-bold"
-                        : cur ? "text-ink-700 font-semibold"
-                        : "text-ink-400"
-                      }`}>{d.getDate()}</div>
-                      {onDayClick && (
-                        <span className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-brand-600 bg-white border border-brand-300 rounded px-1">
-                          +
-                        </span>
-                      )}
-                    </div>
+                  <div key={col} className={cellClasses}>
+                    {inner}
                   </div>
                 );
               })}

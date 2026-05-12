@@ -82,7 +82,7 @@ export default function ContractTemplateEditor({
           <button
             type="button"
             onClick={insertSample}
-            className="text-xs font-semibold text-brand-600 hover:underline"
+            className="text-xs font-semibold text-brand-700 hover:underline"
           >
             ↪ Begin met voorbeeld-template
           </button>

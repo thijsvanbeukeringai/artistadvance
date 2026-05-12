@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 type DeleteAction = (id: string, confirmName: string) => Promise<{ ok: false; error: string } | void>;
 
@@ -30,6 +30,15 @@ export default function DeleteConfirm({
     setTyped("");
     setError(null);
   }
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   function submit() {
     if (!matches) return;
@@ -73,18 +82,21 @@ export default function DeleteConfirm({
           }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-confirm-title"
             className="bg-white border border-ink-200 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <header className="px-5 py-4 border-b border-ink-200 bg-red-50">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-red-100 grid place-items-center text-red-700 flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-red-100 grid place-items-center text-red-700 flex-shrink-0" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
                     <path d="M12 9v4 M12 17h.01 M10.29 3.86l-8.18 14.18A2 2 0 003.83 21h16.34a2 2 0 001.72-2.96L13.71 3.86a2 2 0 00-3.42 0z" />
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold text-ink-900 text-sm">Verwijder {noun} permanent</h3>
+                  <h3 id="delete-confirm-title" className="font-bold text-ink-900 text-sm">Verwijder {noun} permanent</h3>
                   <p className="text-xs text-ink-700 mt-0.5 break-words">
                     "{name}"
                   </p>
@@ -116,7 +128,7 @@ export default function DeleteConfirm({
               </div>
 
               {error && (
-                <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-800">
+                <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-800">
                   {error}
                 </div>
               )}

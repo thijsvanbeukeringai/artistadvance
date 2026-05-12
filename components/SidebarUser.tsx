@@ -34,7 +34,7 @@ export default function SidebarUser({
           type="button"
           onClick={() => start(() => signOutAction())}
           disabled={pending}
-          className="text-[10px] font-semibold text-brand-600 hover:underline disabled:opacity-50"
+          className="text-[10px] font-semibold text-brand-700 hover:underline disabled:opacity-50"
         >
           {pending ? "Bezig..." : "Sign out"}
         </button>

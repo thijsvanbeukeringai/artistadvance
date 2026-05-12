@@ -35,12 +35,24 @@ export default function MobileMenu({
     };
   }, [open]);
 
+  // Escape closes drawer
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
+        aria-expanded={open}
+        aria-controls="mobile-nav-drawer"
         className="lg:hidden w-10 h-10 grid place-items-center rounded-md border border-ink-200 text-ink-700 hover:bg-ink-100 transition"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,7 +66,7 @@ export default function MobileMenu({
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
           <div className="absolute inset-0 bg-black/40" />
-          <aside className="absolute top-0 left-0 h-full w-[80%] max-w-xs bg-white shadow-2xl flex flex-col animate-slide-in">
+          <aside id="mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Navigatiemenu" className="absolute top-0 left-0 h-full w-[80%] max-w-xs bg-white shadow-2xl flex flex-col animate-slide-in motion-reduce:animate-none">
             <div className="flex items-center justify-between px-5 py-4 border-b border-ink-200">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-ink-900 text-white grid place-items-center text-sm font-bold">A</div>

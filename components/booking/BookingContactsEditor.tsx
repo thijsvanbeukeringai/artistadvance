@@ -60,7 +60,7 @@ export default function BookingContactsEditor({
               <button
                 type="button"
                 onClick={() => setPickMode("existing")}
-                className="text-xs font-semibold text-brand-600 hover:bg-brand-50 px-2.5 py-1.5 rounded-md transition"
+                className="text-xs font-semibold text-brand-700 hover:bg-brand-50 px-2.5 py-1.5 rounded-md transition"
               >
                 + Uit CRM ({available.length})
               </button>

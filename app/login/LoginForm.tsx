@@ -71,7 +71,7 @@ export default function LoginForm({ next, initialMode }: { next: string; initial
         </label>
 
         {error && (
-          <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <div role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             {error}
           </div>
         )}
@@ -89,14 +89,14 @@ export default function LoginForm({ next, initialMode }: { next: string; initial
         {mode === "signin" ? (
           <>
             Nog geen account?{" "}
-            <button onClick={() => setMode("signup")} className="font-semibold text-brand-600 hover:underline">
+            <button onClick={() => setMode("signup")} className="font-semibold text-brand-700 hover:underline">
               Maak er een aan
             </button>
           </>
         ) : (
           <>
             Heb je al een account?{" "}
-            <button onClick={() => setMode("signin")} className="font-semibold text-brand-600 hover:underline">
+            <button onClick={() => setMode("signin")} className="font-semibold text-brand-700 hover:underline">
               Sign in
             </button>
           </>

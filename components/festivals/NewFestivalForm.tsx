@@ -77,7 +77,7 @@ export default function NewFestivalForm() {
         </label>
       </div>
 
-      {error && <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-800">{error}</div>}
+      {error && <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-800">{error}</div>}
 
       <div className="flex items-center justify-end gap-2">
         <button type="button" onClick={() => setOpen(false)} disabled={pending} className="text-xs text-ink-700 hover:bg-ink-100 px-2 py-1 rounded disabled:opacity-50">Annuleren</button>
