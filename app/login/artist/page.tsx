@@ -21,7 +21,7 @@ export default function ArtistLoginPage({
           </span>
         </div>
         <LoginForm
-          next={searchParams.next ?? "/"}
+          next={searchParams.next ?? "/advancings"}
           initialMode={searchParams.mode === "signup" ? "signup" : "signin"}
           system="artist"
         />

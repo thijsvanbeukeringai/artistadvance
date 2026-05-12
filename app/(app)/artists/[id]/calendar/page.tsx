@@ -2,15 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import MonthCalendar from "@/components/calendar/MonthCalendar";
 import { loadSnapshot } from "@/lib/snapshot";
+import { readAccount } from "@/lib/account";
 import { buildCalendarEvents } from "@/lib/calendarEvents";
 
 export const dynamic = "force-dynamic";
 
 export default async function ArtistCalendarPage({ params }: { params: { id: string } }) {
-  const snap = await loadSnapshot();
+  const [snap, account] = await Promise.all([loadSnapshot(), readAccount()]);
   const artist = snap.artists.find((a) => a.id === params.id);
   if (!artist) return notFound();
-  const events = buildCalendarEvents(snap, new Set([artist.id]));
+  const events = buildCalendarEvents(snap, new Set([artist.id]), account.mode);
 
   return (
     <div className="space-y-6">

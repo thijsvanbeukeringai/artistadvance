@@ -21,7 +21,7 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
   const artistIds = new Set(artists.map((a) => a.id));
   const companyBookings = snap.bookings.filter((b) => artistIds.has(b.artist_id));
   const companyAdvancings = snap.advancings.filter((a) => companyBookings.some((b) => b.id === a.booking_id));
-  const calendarEvents = buildCalendarEvents(snap, artistIds);
+  const calendarEvents = buildCalendarEvents(snap, artistIds, account.mode);
   const artistOptions = artists.map((a) => ({ id: a.id, name: a.name }));
 
   return (

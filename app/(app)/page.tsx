@@ -364,7 +364,7 @@ function ArtistDashboard({ snap, artistId, accountLabel, role }: { snap: Snapsho
     return { booking: b, festival, stage, advancing, readiness };
   });
 
-  const calendarEvents = buildCalendarEvents(snap, new Set([artistId]));
+  const calendarEvents = buildCalendarEvents(snap, new Set([artistId]), "artist");
 
   return (
     <div className="space-y-6">

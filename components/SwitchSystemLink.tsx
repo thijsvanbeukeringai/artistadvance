@@ -13,7 +13,9 @@ export default function SwitchSystemLink({ mode }: { mode: "agency" | "artist" }
     start(async () => {
       const res = await switchSystemAction(target);
       if (res?.ok) {
-        router.push("/");
+        // Landing-page per systeem. Verschillende URL maakt expliciet
+        // dat je in een ander systeem bent.
+        router.push(target === "artist" ? "/advancings" : "/bookings");
         router.refresh();
       }
     });

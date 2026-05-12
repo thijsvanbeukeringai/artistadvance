@@ -125,7 +125,7 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
           </div>
         </div>
         <AdvancingCalendar
-          events={buildCalendarEvents(snap, new Set([booking.artist_id]))}
+          events={buildCalendarEvents(snap, new Set([booking.artist_id]), "artist")}
           advancingId={advancing.id}
           emptyHint="Voeg vluchten of programma-items toe door op een dag te klikken."
         />

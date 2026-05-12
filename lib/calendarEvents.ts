@@ -17,10 +17,15 @@ const TIMELINE_LABEL: Record<string, string> = {
 
 /**
  * Bouw kalender-events met rijke `meta` voor de popup.
+ *
+ * `system` bepaalt of commerciële velden (zoals `fee`) in de meta verschijnen.
+ * Artist-mode = advancing-team voor de artiest — die mogen GEEN financials
+ * zien. Default is "agency" voor backwards-compat in agency-routes.
  */
 export function buildCalendarEvents(
   snap: Snapshot,
   artistIds: Set<string> | null,
+  system: "agency" | "artist" = "agency",
 ): CalEvent[] {
   const events: CalEvent[] = [];
   const visibleBookings = artistIds
@@ -58,7 +63,7 @@ export function buildCalendarEvents(
       doorsTime: b.doors_time,
       curfewTime: b.curfew_time,
       status: adv?.status ?? b.status,
-      fee: b.fee,
+      fee: system === "agency" ? b.fee : undefined,
       programmingSlot: b.programming_slot,
       soundcheckSlot: b.soundcheck_slot,
     };

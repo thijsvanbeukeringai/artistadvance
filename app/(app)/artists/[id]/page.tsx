@@ -36,7 +36,8 @@ export default async function ArtistDetailPage({ params }: { params: { id: strin
   const drafts = upcoming.filter((x) => x.booking.status === "draft");
   const confirmed = upcoming.filter((x) => x.booking.status !== "draft");
 
-  const calendarEvents = buildCalendarEvents(snap, new Set([artist.id]));
+  const calendarEvents = buildCalendarEvents(snap, new Set([artist.id]), account.mode);
+  const isArtistMode = account.mode === "artist";
 
   return (
     <div className="space-y-6">
@@ -164,7 +165,7 @@ export default async function ArtistDetailPage({ params }: { params: { id: strin
                   <th className="px-5 py-3 font-semibold">Datum / tijd</th>
                   <th className="px-5 py-3 font-semibold">Festival · Stage</th>
                   <th className="px-5 py-3 font-semibold">Show-type</th>
-                  <th className="px-5 py-3 font-semibold">Fee</th>
+                  {!isArtistMode && <th className="px-5 py-3 font-semibold">Fee</th>}
                   <th className="px-5 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 font-semibold text-right">Acties</th>
                 </tr>
@@ -188,9 +189,11 @@ export default async function ArtistDetailPage({ params }: { params: { id: strin
                         {SHOW_TYPE_LABELS[booking.show_type]}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-ink-700 tabular-nums">
-                      {booking.fee ? `€ ${booking.fee.toLocaleString("nl-NL")}` : "—"}
-                    </td>
+                    {!isArtistMode && (
+                      <td className="px-5 py-4 text-ink-700 tabular-nums">
+                        {booking.fee ? `€ ${booking.fee.toLocaleString("nl-NL")}` : "—"}
+                      </td>
+                    )}
                     <td className="px-5 py-4">
                       <StatusPill tone={statusTone(booking.status)}>{humanStatus(booking.status)}</StatusPill>
                     </td>

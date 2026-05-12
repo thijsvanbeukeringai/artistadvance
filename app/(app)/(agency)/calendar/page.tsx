@@ -13,7 +13,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { a
   const allScoped = scopedArtistIds(account, snap.artists);
   const filterArtist = searchParams.artist ?? "";
   const effective = filterArtist && allScoped.has(filterArtist) ? new Set([filterArtist]) : allScoped;
-  const events = buildCalendarEvents(snap, effective);
+  const events = buildCalendarEvents(snap, effective, account.mode);
 
   const artistList = snap.artists
     .filter((a) => allScoped.has(a.id))

@@ -21,7 +21,7 @@ export default function LoginPage({
           </span>
         </div>
         <LoginForm
-          next={searchParams.next ?? "/"}
+          next={searchParams.next ?? "/bookings"}
           initialMode={searchParams.mode === "signup" ? "signup" : "signin"}
           system="agency"
         />
