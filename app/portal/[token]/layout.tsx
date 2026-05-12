@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { findPortalDetail, loadSnapshot } from "@/lib/snapshot";
+import { readAccount } from "@/lib/account";
 
 export default async function PortalLayout({
   children,
@@ -9,26 +10,30 @@ export default async function PortalLayout({
   children: React.ReactNode;
   params: { token: string };
 }) {
-  const snap = await loadSnapshot();
+  const [snap, account] = await Promise.all([loadSnapshot(), readAccount()]);
   const detail = findPortalDetail(snap, params.token);
   if (!detail) return notFound();
   const { artist, festival, booking, advancing } = detail;
+  // Banner alleen tonen aan ingelogde backoffice-gebruikers
+  const isBackofficeUser = account.role !== "guest";
 
   return (
     <div className="min-h-screen bg-ink-100">
-      <div className="bg-ink-900 text-white text-xs">
-        <div className="max-w-6xl mx-auto px-6 py-2 flex items-center justify-between gap-4">
-          <span className="text-ink-200">
-            Je bekijkt de <span className="font-semibold text-white">externe portal</span> (wat een festival ziet).
-          </span>
-          <Link
-            href={`/advancings/${advancing.id}`}
-            className="inline-flex items-center gap-1.5 font-semibold text-white hover:text-brand-400 transition"
-          >
-            ← Terug naar backoffice
-          </Link>
+      {isBackofficeUser && (
+        <div className="bg-ink-900 text-white text-xs">
+          <div className="max-w-6xl mx-auto px-6 py-2 flex items-center justify-between gap-4">
+            <span className="text-ink-200">
+              Je bekijkt de <span className="font-semibold text-white">externe portal</span> (wat een festival ziet).
+            </span>
+            <Link
+              href={`/advancings/${advancing.id}`}
+              className="inline-flex items-center gap-1.5 font-semibold text-white hover:text-brand-400 transition"
+            >
+              ← Terug naar backoffice
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
       <header className="bg-white border-b border-ink-200 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <Link href={`/portal/${params.token}`} className="flex items-center gap-3">

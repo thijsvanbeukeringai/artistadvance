@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SHOW_TYPE_LABELS } from "@/lib/data";
 import { findPortalDetail, loadSnapshot } from "@/lib/snapshot";
+import { readAccount } from "@/lib/account";
 
 export default async function FestivalPortalLayout({
   children,
@@ -10,26 +11,31 @@ export default async function FestivalPortalLayout({
   children: React.ReactNode;
   params: { token: string };
 }) {
-  const snap = await loadSnapshot();
+  const [snap, account] = await Promise.all([loadSnapshot(), readAccount()]);
   const detail = findPortalDetail(snap, params.token);
   if (!detail) return notFound();
   const { artist, festival, booking, advancing } = detail;
+  // Banner alleen tonen aan ingelogde backoffice-gebruikers, niet aan
+  // anonieme festival-bezoekers die de link hebben gekregen
+  const isBackofficeUser = account.role !== "guest";
 
   return (
     <div className="min-h-screen bg-ink-100">
-      <div className="bg-emerald-900 text-white text-xs">
-        <div className="max-w-6xl mx-auto px-6 py-2 flex items-center justify-between gap-4">
-          <span className="text-emerald-100">
-            Je bekijkt het <span className="font-semibold text-white">festival-portal</span> (wat het festival invult).
-          </span>
-          <Link
-            href={`/advancings/${advancing.id}`}
-            className="inline-flex items-center gap-1.5 font-semibold text-white hover:text-emerald-300 transition"
-          >
-            ← Terug naar backoffice
-          </Link>
+      {isBackofficeUser && (
+        <div className="bg-emerald-900 text-white text-xs">
+          <div className="max-w-6xl mx-auto px-6 py-2 flex items-center justify-between gap-4">
+            <span className="text-emerald-100">
+              Je bekijkt het <span className="font-semibold text-white">festival-portal</span> (wat het festival invult).
+            </span>
+            <Link
+              href={`/advancings/${advancing.id}`}
+              className="inline-flex items-center gap-1.5 font-semibold text-white hover:text-emerald-300 transition"
+            >
+              ← Terug naar backoffice
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
       <header className="bg-white border-b border-ink-200 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
           <Link href={`/festival/${params.token}`} className="flex items-center gap-3">
