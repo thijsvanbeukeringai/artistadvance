@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addAdvancingFlightAction, removeAdvancingFlightAction } from "@/lib/actions";
 import type { FlightInfo } from "@/lib/types";
+import { todayAmsterdamIso } from "@/lib/datetime";
 
 const TZ = "Europe/Amsterdam";
 const fmtDateTime = (iso: string) =>
@@ -133,7 +134,7 @@ function AddForm({ advancingId, showDate, onDone }: { advancingId: string; showD
     });
   }
 
-  const defaultDate = showDate ?? new Date().toISOString().slice(0, 10);
+  const defaultDate = showDate ?? todayAmsterdamIso();
 
   return (
     <form onSubmit={submit} className="space-y-2">

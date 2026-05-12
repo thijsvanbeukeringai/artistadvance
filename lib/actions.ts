@@ -584,7 +584,7 @@ export async function generateContractAction(bookingId: string) {
     venue_address: booking.venue_address ?? "",
     venue_city: booking.venue_city ?? "",
     venue_country: booking.venue_country ?? "",
-    today: new Date().toISOString().slice(0, 10),
+    today: new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" }),
   };
 
   const rendered = artist.contract_template_md.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, key) => tokens[key] ?? "");

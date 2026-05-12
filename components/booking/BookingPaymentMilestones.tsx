@@ -7,6 +7,7 @@ import {
   removePaymentMilestoneAction,
 } from "@/lib/actions";
 import type { BookingPaymentMilestone, PaymentMilestoneStatus } from "@/lib/types";
+import { todayAmsterdamIso } from "@/lib/datetime";
 
 const STATUS_LABELS: Record<PaymentMilestoneStatus, string> = {
   pending: "Pending",
@@ -32,7 +33,7 @@ export default function BookingPaymentMilestones({
   totalFee: number | null;
 }) {
   const [adding, setAdding] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayAmsterdamIso();
 
   const paid = milestones.filter((m) => m.status === "paid").reduce((s, m) => s + (m.amount ?? 0), 0);
   const outstanding = milestones.filter((m) => m.status !== "paid").reduce((s, m) => s + (m.amount ?? 0), 0);
@@ -109,7 +110,7 @@ function MilestoneRow({ milestone, bookingId }: { milestone: BookingPaymentMiles
     start(async () => {
       await updatePaymentMilestoneAction(milestone.id, bookingId, {
         status: next,
-        paid_date: next === "paid" ? new Date().toISOString().slice(0, 10) : null,
+        paid_date: next === "paid" ? todayAmsterdamIso() : null,
       });
     });
   }
@@ -144,7 +145,7 @@ function MilestoneRow({ milestone, bookingId }: { milestone: BookingPaymentMiles
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayAmsterdamIso();
   const isOverdue = milestone.status !== "paid" && milestone.due_date && milestone.due_date < today;
 
   return (

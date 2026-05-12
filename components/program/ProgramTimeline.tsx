@@ -240,8 +240,10 @@ function EventForm({
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
 
-  // Default datetime: gebruik existing of show_date + 16:00 als startpunt
-  const defaultDate = existing?.datetime ?? (showDate ? `${showDate}T16:00:00` : new Date().toISOString());
+  // Default datetime: gebruik existing of show_date + 16:00 als startpunt.
+  // Fallback (geen showDate): vandaag in Amsterdam-TZ, NIET UTC.
+  const todayLocal = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Amsterdam" });
+  const defaultDate = existing?.datetime ?? (showDate ? `${showDate}T16:00:00` : `${todayLocal}T16:00:00`);
   const dtLocal = defaultDate.slice(0, 16); // YYYY-MM-DDTHH:MM voor datetime-local
 
   const tone =

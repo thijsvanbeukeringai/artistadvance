@@ -11,6 +11,24 @@
 
 const TZ = "Europe/Amsterdam";
 
+/**
+ * Vandaag als "YYYY-MM-DD" in Europe/Amsterdam.
+ *
+ * NIET gebruiken: `new Date().toISOString().slice(0, 10)` — dat is UTC en
+ * loopt rond middernacht in CEST/CET een dag uit de pas.
+ */
+export function todayAmsterdamIso(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+}
+
+/**
+ * "YYYY-MM-DD" voor een Date in Europe/Amsterdam. Gebruikt lokale getters
+ * (geen toISOString) zodat de datum niet schuift bij TZ-conversie.
+ */
+export function isoDayAmsterdam(d: Date): string {
+  return d.toLocaleDateString("en-CA", { timeZone: TZ });
+}
+
 /** "HH:MM" (24-uur). */
 export function formatTimeNL(iso?: string | null): string {
   if (!iso) return "-";

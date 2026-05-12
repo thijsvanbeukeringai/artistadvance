@@ -281,9 +281,10 @@ function HotelForm({ date, advancingId, onDone }: { date: string; advancingId: s
   const [error, setError] = useState<string | null>(null);
 
   function nextDayISO(iso: string): string {
-    const d = new Date(`${iso}T00:00:00`);
+    const [y, m, dd] = iso.split("-").map(Number);
+    const d = new Date(y, m - 1, dd);
     d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
 
   function submit(e: React.FormEvent<HTMLFormElement>) {

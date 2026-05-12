@@ -28,13 +28,18 @@ const WEEKDAY = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
 function expandEventToDays(event: CalEvent): { iso: string; event: CalEvent }[] {
+  // Parse YYYY-MM-DD direct uit numerieke onderdelen — vermijd Date+toISOString,
+  // dat de datum verschuift bij UTC-conversie (lokale midnight = vorige dag UTC).
+  const [sy, sm, sd] = event.startDate.split("-").map(Number);
+  const [ey, em, ed] = event.endDate.split("-").map(Number);
+  if (!sy || !sm || !sd || !ey || !em || !ed) return [];
   const days: { iso: string; event: CalEvent }[] = [];
-  const start = new Date(event.startDate + "T00:00:00");
-  const end = new Date(event.endDate + "T00:00:00");
-  const d = new Date(start);
-  while (d <= end) {
-    days.push({ iso: d.toISOString().slice(0, 10), event });
-    d.setDate(d.getDate() + 1);
+  const cursor = new Date(sy, sm - 1, sd);
+  const last = new Date(ey, em - 1, ed);
+  while (cursor <= last) {
+    const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
+    days.push({ iso, event });
+    cursor.setDate(cursor.getDate() + 1);
   }
   return days;
 }

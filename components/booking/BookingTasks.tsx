@@ -7,6 +7,7 @@ import {
   removeBookingTaskAction,
 } from "@/lib/actions";
 import type { BookingTask } from "@/lib/types";
+import { todayAmsterdamIso } from "@/lib/datetime";
 
 export default function BookingTasks({ bookingId, tasks }: { bookingId: string; tasks: BookingTask[] }) {
   const [adding, setAdding] = useState(false);
@@ -57,7 +58,7 @@ function TaskRow({ task, bookingId }: { task: BookingTask; bookingId: string }) 
       await removeBookingTaskAction(task.id, bookingId);
     });
   }
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayAmsterdamIso();
   const overdue = !task.done && task.due_date && task.due_date < today;
   return (
     <div className="flex items-center justify-between gap-3 group">
