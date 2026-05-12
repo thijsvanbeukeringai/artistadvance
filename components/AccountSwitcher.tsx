@@ -35,18 +35,18 @@ export default function AccountSwitcher({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-3 pl-3 pr-2 py-1.5 rounded-lg border border-ink-200 bg-white hover:border-brand-400 hover:shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+        className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 pr-1.5 sm:pr-2 py-1.5 rounded-lg border border-ink-200 bg-white hover:border-brand-400 hover:shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 max-w-[60vw] sm:max-w-none"
       >
-        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider ${
+        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded tracking-wider flex-shrink-0 ${
           mode === "artist" ? "bg-brand-50 text-brand-700" : "bg-ink-900 text-white"
         }`}>
           {mode}
         </span>
-        <div className="text-left leading-tight">
-          <div className="text-sm font-semibold text-ink-900">{label}</div>
-          <div className="text-[10px] text-ink-400 truncate max-w-[180px]">{sublabel}</div>
+        <div className="text-left leading-tight min-w-0">
+          <div className="text-sm font-semibold text-ink-900 truncate">{label}</div>
+          <div className="hidden sm:block text-[10px] text-ink-400 truncate max-w-[180px]">{sublabel}</div>
         </div>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink-400 flex-shrink-0">
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
@@ -59,7 +59,7 @@ export default function AccountSwitcher({
             aria-label="sluiten"
             className="fixed inset-0 z-40"
           />
-          <div className="absolute right-0 mt-2 w-80 bg-white border border-ink-200 rounded-xl shadow-2xl overflow-hidden z-50">
+          <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1.5rem))] bg-white border border-ink-200 rounded-xl shadow-2xl overflow-hidden z-50">
             <div className="px-4 pt-3 pb-2 border-b border-ink-200">
               <div className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Workspace switcher</div>
               <p className="text-[11px] text-ink-400 mt-0.5">Kies of je per artiest of per agency werkt.</p>

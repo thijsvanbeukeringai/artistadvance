@@ -20,3 +20,26 @@ body {
 * { box-sizing: border-box; }
 
 ::selection { background: #ffd9c1; color: #0f1115; }
+
+/* iOS safe-area utilities */
+@layer utilities {
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .px-safe {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Voorkom iOS-zoom op input focus (font-size < 16px triggert auto-zoom op iPhone) */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
