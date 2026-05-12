@@ -11,6 +11,8 @@ import { SECTION_LABELS, TECH_SECTIONS } from "@/lib/data";
 import type { SectionType } from "@/lib/types";
 import { findPortalDetail, loadSnapshot } from "@/lib/snapshot";
 
+export const dynamic = "force-dynamic";
+
 const ALL_SECTIONS = new Set<SectionType>([
   ...TECH_SECTIONS,
   "logistics", "travel", "hotel", "hospitality", "contacts", "visa",

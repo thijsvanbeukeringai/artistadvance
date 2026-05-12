@@ -1107,6 +1107,19 @@ export async function syncAdvancingTechAction(advancingId: string) {
   try {
     const result = await syncAdvancingTechFromArtistTemplate(advancingId);
     revalidatePath(`/advancings/${advancingId}`);
+    revalidatePath(`/advancings`);
+    // Portal-paden (token-based) — vind het token zodat we de portal-cache ook flushen
+    const { supabaseService } = await import("./supabase-service");
+    const { data: adv } = await supabaseService()
+      .from("advancings")
+      .select("portal_token")
+      .eq("id", advancingId)
+      .maybeSingle();
+    const tok = adv?.portal_token;
+    if (tok) {
+      revalidatePath(`/portal/${tok}`);
+      revalidatePath(`/portal/${tok}/[section]`, "page");
+    }
     return { ok: true as const, inserted: result.inserted };
   } catch (e) {
     return { ok: false as const, error: (e as Error).message };
