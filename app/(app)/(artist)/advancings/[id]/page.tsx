@@ -13,8 +13,6 @@ import TouringPartyTable from "@/components/booking/TouringPartyTable";
 import TechItemsList from "@/components/tech/TechItemsList";
 import SyncTechFromTemplateButton from "@/components/tech/SyncTechFromTemplateButton";
 import ProgramTimeline from "@/components/program/ProgramTimeline";
-import AdvancingCalendar from "@/components/calendar/AdvancingCalendar";
-import { buildCalendarEvents } from "@/lib/calendarEvents";
 import RoomAssignmentsEditor from "@/components/booking/RoomAssignmentsEditor";
 import { findAdvancingDetail, loadSnapshot } from "@/lib/snapshot";
 import AdvancingTabs, { type AdvancingTab } from "@/components/advancing/AdvancingTabs";
@@ -178,21 +176,6 @@ export default async function AdvancingDetailPage({ params }: { params: { id: st
           <Link href={`/festival/${advancing.portal_token}`} className="mt-2 inline-block text-sm font-semibold text-emerald-700 hover:underline">Open festival portal →</Link>
         </div>
       </div>
-
-      {/* Calendar */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h3 className="font-bold text-ink-900">Kalender</h3>
-            <p className="text-[11px] text-ink-500 mt-0.5">Klik op een dag om een vlucht, hotel, programma-item of reminder toe te voegen.</p>
-          </div>
-        </div>
-        <AdvancingCalendar
-          events={buildCalendarEvents(snap, new Set([booking.artist_id]), "artist")}
-          advancingId={advancing.id}
-          emptyHint="Voeg vluchten, hotels of programma-items toe door op een dag te klikken."
-        />
-      </section>
 
       {/* Program timeline */}
       <ProgramTimeline
