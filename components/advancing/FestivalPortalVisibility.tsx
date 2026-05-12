@@ -6,14 +6,14 @@ import { setFestivalPortalVisibilityAction } from "@/lib/actions";
 
 type SectionKey = "tech" | "program" | "hotel" | "distances" | "travel" | "documents" | "riders";
 
-const SECTIONS: { key: SectionKey; label: string; desc: string }[] = [
-  { key: "program", label: "Programma & timings", desc: "Schedule met load-in, soundcheck, doors, show, load-out." },
-  { key: "tech", label: "Tech requirements", desc: "PLEASE CONFIRM lijst met alle tech items per categorie." },
-  { key: "riders", label: "Signed riders", desc: "Technische + hospitality rider tekenen of uploaden." },
-  { key: "hotel", label: "Hotel proposals", desc: "Hotel-opties die het festival voorstelt." },
-  { key: "distances", label: "Distances", desc: "Airport ↔ hotel ↔ venue afstanden." },
-  { key: "travel", label: "Travel (vluchten + transfers)", desc: "Inbound/outbound vluchten en ground-transfers." },
-  { key: "documents", label: "Festival documents", desc: "Plek waar festival hun tech pack / parking map kan uploaden." },
+const SECTIONS: { key: SectionKey; label: string; group: string; desc: string }[] = [
+  { key: "program", label: "Run of show", group: "Run of show", desc: "Schedule: load-in, soundcheck, doors, show, load-out." },
+  { key: "tech", label: "Tech requirements", group: "Technical", desc: "PLEASE CONFIRM lijst met alle tech items per categorie." },
+  { key: "travel", label: "Vluchten + transfers", group: "Transport", desc: "Inbound/outbound vluchten en ground-transfers airport ↔ hotel ↔ venue." },
+  { key: "distances", label: "Distances", group: "Transport", desc: "Afstanden in km/minuten tussen airport, hotel en venue." },
+  { key: "hotel", label: "Hotel proposals", group: "Hotel", desc: "Hotel-opties die het festival voorstelt." },
+  { key: "documents", label: "Festival documents", group: "Documents", desc: "Plek waar festival hun tech pack / parking map kan uploaden." },
+  { key: "riders", label: "Signed riders", group: "Riders", desc: "Technische + hospitality rider tekenen of uploaden." },
 ];
 
 export default function FestivalPortalVisibility({
@@ -69,8 +69,9 @@ export default function FestivalPortalVisibility({
       </div>
 
       <ul className="divide-y divide-ink-200 border-y border-ink-200">
-        {SECTIONS.map((s) => {
+        {SECTIONS.map((s, i) => {
           const visible = !hidden.has(s.key);
+          const showGroupLabel = i === 0 || SECTIONS[i - 1].group !== s.group;
           return (
             <li key={s.key} className="py-3 flex items-center gap-3">
               <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
@@ -81,7 +82,14 @@ export default function FestivalPortalVisibility({
                   className="w-4 h-4 rounded border-ink-300 text-emerald-600 focus:ring-emerald-400"
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-ink-900">{s.label}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-ink-900">{s.label}</span>
+                    {showGroupLabel && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider bg-ink-100 text-ink-500 px-1.5 py-0.5 rounded">
+                        {s.group}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-ink-500">{s.desc}</div>
                 </div>
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${
