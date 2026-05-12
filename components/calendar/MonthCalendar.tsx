@@ -417,10 +417,12 @@ function EventPill({
 
   return (
     <div
-      className="absolute pointer-events-auto"
+      className="absolute pointer-events-auto z-10"
       style={{
-        left: `calc(${leftPct}% + 2px)`,
-        width: `calc(${widthPct}% - 4px)`,
+        // Extra rechtsmarge zodat het volgende dag-cijfer in de cel ernaast
+        // duidelijk losstaat van het einde van een 1-day pill
+        left: `calc(${leftPct}% + 3px)`,
+        width: `calc(${widthPct}% - 18px)`,
         top,
         height: 18,
       }}
