@@ -1,0 +1,18 @@
+node_modules
+.next
+out
+.env
+.env.local
+.DS_Store
+next-env.d.ts
+
+# Internal specs (niet public)
+artistadvance-advancing-spec.md
+artistadvance-advancing-spec-v2.md
+
+# Vercel
+.vercel
+
+# Editor / local artifacts
+.claude
+tsconfig.tsbuildinfo
