@@ -110,6 +110,8 @@ export type RiderType =
   | "club"
   | "festival"
   | "dressingroom"
+  | "sfx"
+  | "laser"
   | "sfx_pyro";
 
 export const RIDER_TYPES: RiderType[] = [
@@ -122,6 +124,8 @@ export const RIDER_TYPES: RiderType[] = [
   "club",
   "festival",
   "dressingroom",
+  "sfx",
+  "laser",
 ];
 
 export const RIDER_TYPE_LABELS: Record<RiderType, string> = {
@@ -134,6 +138,8 @@ export const RIDER_TYPE_LABELS: Record<RiderType, string> = {
   club: "Clubrider",
   festival: "Festival Rider",
   dressingroom: "Dressingroom Rider",
+  sfx: "SFX Rider",
+  laser: "Laser Rider",
   sfx_pyro: "SFX / Pyro Rider",
 };
 

@@ -21,4 +21,4 @@ ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS selected_riders text[] NOT NULL DEFAULT '{}'::text[];
 
 COMMENT ON COLUMN bookings.selected_riders IS
-  'rider_type keys (technical, hospitality, production, bus, rigging, stage, club, festival, dressingroom, sfx_pyro) die in dit show meegestuurd worden naar het festival portal.';
+  'rider_type keys (technical, hospitality, production, bus, rigging, stage, club, festival, dressingroom, sfx, laser, sfx_pyro) die in dit show meegestuurd worden naar het festival portal.';
