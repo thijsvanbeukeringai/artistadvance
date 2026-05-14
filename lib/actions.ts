@@ -69,6 +69,9 @@ import {
   setBookingParkingMap,
   setBookingContractPdf,
   syncAdvancingTechFromArtistTemplate,
+  upsertArtistRiderTemplate,
+  removeArtistRiderTemplate,
+  setBookingSelectedRiders,
 } from "./db";
 import { readAccount } from "./account";
 import { loadSnapshot } from "./snapshot";
@@ -80,6 +83,7 @@ import type {
   ArtistTravelDefaults,
   CrewRole,
   FestivalDocumentCategory,
+  RiderType,
   GroundTransferStatus,
   GroundTransferType,
   HotelAmenity,
@@ -807,7 +811,7 @@ export async function confirmBookingAction(bookingId: string) {
 // Festival rider upload (trigger 4) - accepteert echte File via FormData
 export async function uploadSignedRiderAction(formData: FormData) {
   const token = String(formData.get("token") || "");
-  const riderType = String(formData.get("rider_type") || "technical") as "technical" | "hospitality" | "sfx_pyro";
+  const riderType = String(formData.get("rider_type") || "technical") as RiderType;
   const signerName = String(formData.get("signer_name") || "").trim() || undefined;
   const signerRole = String(formData.get("signer_role") || "").trim() || undefined;
   const file = formData.get("file") as File | null;
@@ -826,7 +830,7 @@ export async function uploadSignedRiderAction(formData: FormData) {
   return { ok: true };
 }
 
-export async function signRiderInPortalAction(token: string, riderType: "technical" | "hospitality" | "sfx_pyro", signerName: string, signerRole?: string) {
+export async function signRiderInPortalAction(token: string, riderType: RiderType, signerName: string, signerRole?: string) {
   const adv = await getAdvancingByToken(token);
   if (!adv) return { ok: false };
   if (!signerName?.trim()) return { ok: false, error: "Naam is verplicht" };
@@ -880,16 +884,50 @@ export async function addFestivalDocumentAction(formData: FormData) {
   const { uploadFile } = await import("./storage");
   const { path } = await uploadFile("festival-documents", [adv.id, category], file);
 
-  await addFestivalDocument(adv.id, {
+  const insertedId = await addFestivalDocument(adv.id, {
     category,
     file_name: file.name,
     storage_path: path,
     uploaded_by_name: uploadedBy,
     notes,
   });
+
+  // Parallel: sync naar Dropbox. Fail-safe — Supabase blijft de source of truth.
+  if (insertedId) {
+    void syncFestivalDocToDropbox(adv.id, insertedId, category, file);
+  }
+
   await refresh(token);
   revalidatePath(`/festival/${token}`);
   return { ok: true };
+}
+
+async function syncFestivalDocToDropbox(
+  advancingId: string,
+  docId: string,
+  category: FestivalDocumentCategory,
+  file: File,
+) {
+  const { resolveFestivalDocContext, buildFestivalDocPath, uploadFileToArtistDropbox } = await import("./dropbox");
+  const { markFestivalDocSyncResult, getDropboxFolderForCategory } = await import("./db");
+  try {
+    const subFolder = getDropboxFolderForCategory(category);
+    const ctx = await resolveFestivalDocContext(advancingId, subFolder);
+    if ("skipped" in ctx) {
+      await markFestivalDocSyncResult(docId, { synced: false, error: ctx.reason });
+      return;
+    }
+    const targetPath = buildFestivalDocPath(ctx, file.name);
+    const buf = await file.arrayBuffer();
+    const result = await uploadFileToArtistDropbox(ctx.artistId, targetPath, buf, { mode: "add", autorename: true });
+    await markFestivalDocSyncResult(docId, {
+      synced: true,
+      path: result.path_display,
+      file_id: result.id,
+    });
+  } catch (e: any) {
+    await markFestivalDocSyncResult(docId, { synced: false, error: e?.message ?? "upload failed" });
+  }
 }
 
 export async function removeFestivalDocumentAction(token: string, docId: string) {
@@ -899,6 +937,16 @@ export async function removeFestivalDocumentAction(token: string, docId: string)
   await refresh(token);
   revalidatePath(`/festival/${token}`);
   return { ok: true };
+}
+
+export async function retryFestivalDocSyncAction(token: string, docId: string) {
+  const adv = await getAdvancingByToken(token);
+  if (!adv) return { ok: false, error: "Geen advancing" };
+  const { retryFestivalDocSync } = await import("./db");
+  const r = await retryFestivalDocSync(docId);
+  await refresh(token);
+  revalidatePath(`/festival/${token}`);
+  return r;
 }
 
 export async function addFestivalContactAction(token: string, formData: FormData) {
@@ -925,7 +973,7 @@ export async function removeFestivalContactAction(token: string, contactId: stri
   revalidatePath(`/festival/${token}`);
 }
 
-export async function disputeRiderAction(token: string, riderType: "technical" | "hospitality" | "sfx_pyro", reason: string) {
+export async function disputeRiderAction(token: string, riderType: RiderType, reason: string) {
   const adv = await getAdvancingByToken(token);
   if (!adv) return { ok: false };
   await disputeRider(adv.id, riderType, reason);
@@ -933,7 +981,7 @@ export async function disputeRiderAction(token: string, riderType: "technical" |
   return { ok: true };
 }
 
-export async function acceptRiderAction(token: string, riderType: "technical" | "hospitality" | "sfx_pyro") {
+export async function acceptRiderAction(token: string, riderType: RiderType) {
   const adv = await getAdvancingByToken(token);
   if (!adv) return { ok: false };
   await acceptRider(adv.id, riderType);
@@ -1499,5 +1547,58 @@ export async function updateArtistManagerAction(artistId: string, patch: {
   await updateArtist(artistId, patch);
   revalidatePath(`/artists/${artistId}`);
   revalidatePath(`/artists/${artistId}/settings`);
+  return { ok: true as const };
+}
+
+export async function updateArtistDropboxFolderAction(artistId: string, folder: string | null) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  const trimmed = (folder ?? "").trim();
+  const normalized = trimmed
+    ? trimmed.startsWith("/") ? trimmed : `/${trimmed}`
+    : null;
+  await updateArtist(artistId, { dropbox_artist_folder: normalized });
+  revalidatePath(`/artists/${artistId}/settings`);
+  return { ok: true as const };
+}
+
+// ============================================================================
+// Rider templates per artist
+// ============================================================================
+
+export async function uploadArtistRiderTemplateAction(artistId: string, formData: FormData) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  const riderType = String(formData.get("rider_type") || "") as RiderType;
+  const file = formData.get("file") as File | null;
+  if (!riderType) return { ok: false as const, error: "rider_type vereist" };
+  if (!file || file.size === 0) return { ok: false as const, error: "Bestand vereist" };
+  if (file.size > 20 * 1024 * 1024) return { ok: false as const, error: "Max 20 MB" };
+
+  const { uploadFile } = await import("./storage");
+  const { path } = await uploadFile("rider-templates", [artistId, riderType], file);
+  await upsertArtistRiderTemplate(artistId, riderType, {
+    file_name: file.name,
+    storage_path: path,
+  });
+  revalidatePath(`/artists/${artistId}/settings`);
+  revalidatePath(`/artists/${artistId}/templates`);
+  return { ok: true as const };
+}
+
+export async function removeArtistRiderTemplateAction(artistId: string, riderType: RiderType) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  await removeArtistRiderTemplate(artistId, riderType);
+  revalidatePath(`/artists/${artistId}/settings`);
+  revalidatePath(`/artists/${artistId}/templates`);
+  return { ok: true as const };
+}
+
+export async function setBookingSelectedRidersAction(bookingId: string, riderTypes: RiderType[]) {
+  const az = await requireBookingAccess(bookingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  await setBookingSelectedRiders(bookingId, riderTypes);
+  revalidatePath(`/bookings/${bookingId}`);
   return { ok: true as const };
 }

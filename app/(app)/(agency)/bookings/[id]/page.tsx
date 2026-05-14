@@ -7,6 +7,7 @@ import BookingFlightsBlock from "@/components/booking/BookingFlightsBlock";
 import BookingCrewMirror from "@/components/booking/BookingCrewMirror";
 import BookingTasks from "@/components/booking/BookingTasks";
 import ContractGeneratorBlock from "@/components/booking/ContractGeneratorBlock";
+import RiderSelectionEditor from "@/components/booking/RiderSelectionEditor";
 import ConfirmBookingButton from "@/components/booking/ConfirmBookingButton";
 import DeleteBookingButton from "@/components/booking/DeleteBookingButton";
 import StatusPill, { statusTone } from "@/components/StatusPill";
@@ -180,6 +181,13 @@ export default async function BookingDetailPage({ params }: { params: { id: stri
             hasTemplate={!!(artist.contract_template_md && artist.contract_template_md.trim())}
             currentUrl={booking.contract_pdf_url ?? null}
             generatedAt={booking.contract_generated_at ?? null}
+          />
+
+          {/* Riders die meegestuurd worden in festival portal */}
+          <RiderSelectionEditor
+            bookingId={booking.id}
+            selected={booking.selected_riders ?? []}
+            templates={snap.artistRiderTemplates.filter((t) => t.artist_id === artist.id)}
           />
 
           {/* Payment milestones */}

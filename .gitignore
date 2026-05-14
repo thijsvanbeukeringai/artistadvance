@@ -16,3 +16,7 @@ artistadvance-advancing-spec-v2.md
 # Editor / local artifacts
 .claude
 tsconfig.tsbuildinfo
+
+# Supabase CLI link state
+supabase/.temp
+supabase/.branches

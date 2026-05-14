@@ -57,6 +57,9 @@ export interface Artist {
   name: string;
   organization_id: string;
   dropbox_artist_folder?: string | null;
+  /** Aanwezigheid van refresh-token = artiest is gekoppeld. */
+  dropbox_connected?: boolean;
+  dropbox_account_email?: string | null;
   image?: string;
   defaults_hospitality?: ArtistHospitalityDefaults;
   defaults_hotel?: ArtistHotelDefaults;
@@ -97,14 +100,51 @@ export interface ArtistCrew {
 }
 
 export type ShowType = "festival" | "club" | "full_production" | "ldjv" | "venue" | "corporate" | "private";
-export type RiderType = "technical" | "hospitality" | "sfx_pyro";
+export type RiderType =
+  | "technical"
+  | "hospitality"
+  | "production"
+  | "bus"
+  | "rigging"
+  | "stage"
+  | "club"
+  | "festival"
+  | "dressingroom"
+  | "sfx_pyro";
+
+export const RIDER_TYPES: RiderType[] = [
+  "technical",
+  "hospitality",
+  "production",
+  "bus",
+  "rigging",
+  "stage",
+  "club",
+  "festival",
+  "dressingroom",
+];
+
+export const RIDER_TYPE_LABELS: Record<RiderType, string> = {
+  technical: "Technische Rider",
+  hospitality: "Hospitality Rider",
+  production: "Productierider",
+  bus: "Busrider",
+  rigging: "Riggingrider",
+  stage: "Stagerider",
+  club: "Clubrider",
+  festival: "Festival Rider",
+  dressingroom: "Dressingroom Rider",
+  sfx_pyro: "SFX / Pyro Rider",
+};
 
 export interface ArtistRiderTemplate {
   id: string;
   artist_id: string;
-  show_type: ShowType;
+  /** Legacy veld. Nieuwe templates zijn show_type-onafhankelijk (null). */
+  show_type?: ShowType | null;
   rider_type: RiderType;
   file_name: string;
+  storage_path?: string | null;
   is_active: boolean;
   version: number;
 }
@@ -205,6 +245,8 @@ export interface Booking {
   slot_position?: string;
   b2b_partner?: string;
   last_activity_at?: string;
+  /** rider_types die voor dit show meegestuurd moeten naar het festival portal. */
+  selected_riders?: RiderType[];
   // Deal economics
   commission_pct?: number;
   vat_pct?: number;
@@ -597,6 +639,12 @@ export interface FestivalDocument {
   uploaded_by_name?: string;
   uploaded_at: string;
   notes?: string;
+  // Dropbox sync state
+  synced_to_dropbox?: boolean;
+  dropbox_path?: string | null;
+  dropbox_file_id?: string | null;
+  dropbox_synced_at?: string | null;
+  dropbox_error?: string | null;
   // Hydrated door snapshot loader.
   url?: string | null;
 }

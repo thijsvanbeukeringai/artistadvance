@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addFestivalDocumentAction, removeFestivalDocumentAction } from "@/lib/actions";
+import {
+  addFestivalDocumentAction,
+  removeFestivalDocumentAction,
+  retryFestivalDocSyncAction,
+} from "@/lib/actions";
 import type { DropboxFolder, FestivalDocument, FestivalDocumentCategory } from "@/lib/types";
 
 const CATEGORY_LABELS: Record<FestivalDocumentCategory, { label: string; folder: DropboxFolder }> = {
@@ -127,6 +131,7 @@ export default function FestivalDocumentsBlock({
                             ) : (
                               <span className="flex items-center gap-2 flex-1 min-w-0">{fileEl}</span>
                             )}
+                            <SyncBadge doc={d} token={token} pending={pending} startTransition={startTransition} />
                             {d.uploaded_by_name && <span className="text-[10px] text-ink-400">({d.uploaded_by_name})</span>}
                             <span className="text-[10px] text-ink-400 tabular-nums">{new Date(d.uploaded_at).toLocaleDateString("nl-NL")}</span>
                             <button
@@ -170,6 +175,47 @@ export default function FestivalDocumentsBlock({
         })}
       </ul>
     </section>
+  );
+}
+
+function SyncBadge({
+  doc,
+  token,
+  pending,
+  startTransition,
+}: {
+  doc: FestivalDocument;
+  token: string;
+  pending: boolean;
+  startTransition: (cb: () => void) => void;
+}) {
+  if (doc.synced_to_dropbox) {
+    return (
+      <span
+        className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded"
+        title={doc.dropbox_path ? `Dropbox: ${doc.dropbox_path}` : "Gesynct met Dropbox"}
+      >
+        ✓ Dropbox
+      </span>
+    );
+  }
+  if (doc.dropbox_error) {
+    return (
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => startTransition(() => { void retryFestivalDocSyncAction(token, doc.id); })}
+        className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded hover:bg-amber-100 disabled:opacity-50"
+        title={doc.dropbox_error}
+      >
+        ⟳ Retry
+      </button>
+    );
+  }
+  return (
+    <span className="text-[10px] font-bold text-ink-400 bg-ink-50 px-1.5 py-0.5 rounded" title="Dropbox sync nog niet voltooid">
+      … sync
+    </span>
   );
 }
 

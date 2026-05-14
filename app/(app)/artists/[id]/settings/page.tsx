@@ -9,6 +9,8 @@ import LogisticsDefaultsEditor from "@/components/artistSettings/LogisticsDefaul
 import ManagerEditor from "@/components/artistSettings/ManagerEditor";
 import ContractTemplateEditor from "@/components/artistSettings/ContractTemplateEditor";
 import DropboxTree from "@/components/booking/DropboxTree";
+import DropboxConnect from "@/components/artistSettings/DropboxConnect";
+import RiderTemplatesEditor from "@/components/artistSettings/RiderTemplatesEditor";
 import StatusPill, { humanStatus } from "@/components/StatusPill";
 
 export const dynamic = "force-dynamic";
@@ -97,28 +99,29 @@ export default async function ArtistSettingsPage({ params }: { params: { id: str
       {/* Contract template */}
       <ContractTemplateEditor artistId={artist.id} initialTemplate={artist.contract_template_md ?? null} />
 
+      {/* Rider templates (PDF per rider-type, centraal) */}
+      <RiderTemplatesEditor
+        artistId={artist.id}
+        templates={snap.artistRiderTemplates.filter((t) => t.artist_id === artist.id)}
+      />
+
       {/* Dropbox koppeling + folder-structuur */}
-      <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-5">
-        <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
-          <div>
-            <h3 className="font-bold text-ink-900">Dropbox</h3>
-            <p className="text-xs text-ink-500 mt-1">
-              Koppel een Dropbox root-folder voor {artist.name}. Bij elke booking-bevestiging wordt automatisch een
-              show-folder aangemaakt volgens de structuur hieronder.
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled
-            className="text-xs px-3 py-1.5 rounded-md border border-ink-200 text-ink-400 bg-ink-50 cursor-not-allowed font-semibold"
-            title="Coming soon"
-          >
-            Koppel Dropbox (binnenkort)
-          </button>
+      <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-5 space-y-5">
+        <div>
+          <h3 className="font-bold text-ink-900">Dropbox</h3>
+          <p className="text-xs text-ink-500 mt-1">
+            Koppel Dropbox voor {artist.name}. Bij elke booking-bevestiging wordt automatisch een show-folder
+            aangemaakt onder de root-map met de structuur hieronder. Festival-uploads gaan automatisch naar de
+            juiste sub-map.
+          </p>
         </div>
-        <div className="text-xs text-ink-500 mb-2 font-mono">
-          Root folder: <span className="text-ink-900">{artist.dropbox_artist_folder ?? `/${artist.name}/`}</span>
-        </div>
+        <DropboxConnect
+          artistId={artist.id}
+          artistName={artist.name}
+          connected={!!artist.dropbox_connected}
+          accountEmail={artist.dropbox_account_email ?? null}
+          rootFolder={artist.dropbox_artist_folder ?? null}
+        />
         <DropboxTree rootFolder={artist.dropbox_artist_folder ?? undefined} />
       </section>
 

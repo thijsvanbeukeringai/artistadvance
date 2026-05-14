@@ -3,13 +3,10 @@
 import { useState, useTransition } from "react";
 import { signRiderInPortalAction, uploadSignedRiderAction } from "@/lib/actions";
 import type { SignedRider } from "@/lib/types";
+import { RIDER_TYPE_LABELS } from "@/lib/types";
 import { humanStatus } from "@/components/StatusPill";
 
-const RIDER_LABELS: Record<string, string> = {
-  technical: "Technische rider",
-  hospitality: "Hospitality rider",
-  sfx_pyro: "SFX/Pyro rider",
-};
+const RIDER_LABELS: Record<string, string> = RIDER_TYPE_LABELS;
 
 const STATUS_TONE: Record<string, string> = {
   pending: "bg-ink-100 text-ink-700",
@@ -59,6 +56,7 @@ function RiderRow({ token, rider }: { token: string; rider: SignedRider }) {
   const [err, setErr] = useState<string | null>(null);
 
   const signedUrl = rider.signed_url ?? null;
+  const originalUrl = `/api/portal/${token}/rider-template/${rider.rider_type}`;
 
   function close() { setMode("closed"); setErr(null); }
 
@@ -143,16 +141,17 @@ function RiderRow({ token, rider }: { token: string; rider: SignedRider }) {
               <div className="text-xs text-ink-500 mt-0.5">
                 {signedUrl
                   ? "Getekende PDF in Supabase Storage. Open in nieuwe tab."
-                  : "Nog geen getekende PDF geupload. Origineel komt nog van management."}
+                  : "Origineel-rider klaar voor download + handtekening."}
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                {signedUrl ? (
+              <div className="mt-2 flex items-center gap-3 flex-wrap">
+                {signedUrl && (
                   <a href={signedUrl} target="_blank" rel="noopener" className="text-xs font-semibold text-brand-700 hover:underline">
-                    Open document →
+                    Open getekende →
                   </a>
-                ) : (
-                  <span className="text-[10px] text-ink-400">Origineel-link komt zodra management de template upload.</span>
                 )}
+                <a href={originalUrl} target="_blank" rel="noopener" className="text-xs font-semibold text-ink-700 hover:underline">
+                  Download origineel →
+                </a>
               </div>
             </div>
           </div>

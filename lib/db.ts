@@ -625,10 +625,10 @@ export async function addFestivalDocument(advId: string, payload: {
   storage_path?: string | null;
   uploaded_by_name?: string;
   notes?: string;
-}) {
+}): Promise<string | null> {
   const c = client();
   const mapping = DOC_CATEGORY_MAP[payload.category];
-  await c.from("festival_documents").insert({
+  const { data, error } = await c.from("festival_documents").insert({
     advancing_id: advId,
     category: payload.category,
     dropbox_folder: mapping.folder,
@@ -637,11 +637,74 @@ export async function addFestivalDocument(advId: string, payload: {
     uploaded_by_name: payload.uploaded_by_name,
     uploaded_at: new Date().toISOString(),
     notes: payload.notes,
-  });
+    synced_to_dropbox: false,
+  }).select("id").single();
+  if (error) throw error;
   if (mapping.section) {
     await syncSectionStatus(advId, mapping.section);
   }
   await logActivity(advId, payload.uploaded_by_name ?? "Festival", "festival", "file_uploaded", mapping.section, payload.file_name);
+  return data?.id ?? null;
+}
+
+export function getDropboxFolderForCategory(category: FestivalDocumentCategory): DropboxFolder {
+  return DOC_CATEGORY_MAP[category].folder;
+}
+
+export async function markFestivalDocSyncResult(
+  docId: string,
+  result: { synced: true; path: string; file_id: string } | { synced: false; error: string },
+): Promise<void> {
+  const c = client();
+  const patch = result.synced
+    ? {
+        synced_to_dropbox: true,
+        dropbox_path: result.path,
+        dropbox_file_id: result.file_id,
+        dropbox_synced_at: new Date().toISOString(),
+        dropbox_error: null,
+      }
+    : {
+        synced_to_dropbox: false,
+        dropbox_error: result.error,
+        dropbox_synced_at: new Date().toISOString(),
+      };
+  await c.from("festival_documents").update(patch).eq("id", docId);
+}
+
+/** Re-sync een festival document dat eerder gefaald is. */
+export async function retryFestivalDocSync(docId: string): Promise<{ ok: boolean; error?: string }> {
+  const c = client();
+  const { data: doc } = await c
+    .from("festival_documents")
+    .select("id, advancing_id, category, file_name, storage_path")
+    .eq("id", docId)
+    .maybeSingle();
+  if (!doc?.storage_path) return { ok: false, error: "geen storage_path" };
+
+  // Download uit Supabase, upload naar Dropbox
+  const bucket = c.storage.from("festival-documents");
+  const dl = await bucket.download(doc.storage_path);
+  if (dl.error || !dl.data) return { ok: false, error: dl.error?.message ?? "download faalde" };
+
+  try {
+    const { resolveFestivalDocContext, buildFestivalDocPath, uploadFileToArtistDropbox } = await import("./dropbox");
+    const subFolder = getDropboxFolderForCategory(doc.category as FestivalDocumentCategory);
+    const ctx = await resolveFestivalDocContext(doc.advancing_id, subFolder);
+    if ("skipped" in ctx) {
+      await markFestivalDocSyncResult(docId, { synced: false, error: ctx.reason });
+      return { ok: false, error: ctx.reason };
+    }
+    const targetPath = buildFestivalDocPath(ctx, doc.file_name);
+    const buf = await dl.data.arrayBuffer();
+    const result = await uploadFileToArtistDropbox(ctx.artistId, targetPath, buf, { mode: "add", autorename: true });
+    await markFestivalDocSyncResult(docId, { synced: true, path: result.path_display, file_id: result.id });
+    return { ok: true };
+  } catch (e: any) {
+    const msg = e?.message ?? "upload failed";
+    await markFestivalDocSyncResult(docId, { synced: false, error: msg });
+    return { ok: false, error: msg };
+  }
 }
 
 export async function removeFestivalDocument(advId: string, docId: string) {
@@ -770,6 +833,116 @@ export async function deleteArtist(id: string) {
   const c = client();
   const { error } = await c.from("artists").delete().eq("id", id);
   if (error) throw error;
+}
+
+// ============================================================================
+// Artist rider templates (per artist, niet per show_type)
+// ============================================================================
+
+export async function upsertArtistRiderTemplate(
+  artistId: string,
+  riderType: RiderType,
+  payload: { file_name: string; storage_path: string },
+): Promise<void> {
+  const c = client();
+  // Bestaande row?
+  const { data: existing } = await c
+    .from("artist_rider_templates")
+    .select("id, version, storage_path")
+    .eq("artist_id", artistId)
+    .eq("rider_type", riderType)
+    .is("show_type", null)
+    .maybeSingle();
+
+  if (existing?.id) {
+    // Oude file uit storage halen
+    if (existing.storage_path && existing.storage_path !== payload.storage_path) {
+      await c.storage.from("rider-templates").remove([existing.storage_path]);
+    }
+    const { error } = await c.from("artist_rider_templates").update({
+      file_name: payload.file_name,
+      storage_path: payload.storage_path,
+      version: (existing.version ?? 1) + 1,
+      is_active: true,
+    }).eq("id", existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await c.from("artist_rider_templates").insert({
+      artist_id: artistId,
+      rider_type: riderType,
+      show_type: null,
+      file_name: payload.file_name,
+      storage_path: payload.storage_path,
+      is_active: true,
+      version: 1,
+    });
+    if (error) throw error;
+  }
+}
+
+export async function removeArtistRiderTemplate(
+  artistId: string,
+  riderType: RiderType,
+): Promise<void> {
+  const c = client();
+  const { data: existing } = await c
+    .from("artist_rider_templates")
+    .select("id, storage_path")
+    .eq("artist_id", artistId)
+    .eq("rider_type", riderType)
+    .is("show_type", null)
+    .maybeSingle();
+  if (!existing?.id) return;
+  if (existing.storage_path) {
+    await c.storage.from("rider-templates").remove([existing.storage_path]);
+  }
+  await c.from("artist_rider_templates").delete().eq("id", existing.id);
+}
+
+export async function setBookingSelectedRiders(
+  bookingId: string,
+  riderTypes: RiderType[],
+): Promise<void> {
+  const c = client();
+  const { error } = await c.from("bookings").update({ selected_riders: riderTypes }).eq("id", bookingId);
+  if (error) throw error;
+
+  // Sync signed_riders rijen op de bijbehorende advancing.
+  const { data: adv } = await c.from("advancings").select("id").eq("booking_id", bookingId).maybeSingle();
+  if (!adv?.id) return;
+  await syncSignedRidersForAdvancing(adv.id, riderTypes);
+}
+
+async function syncSignedRidersForAdvancing(advancingId: string, riderTypes: RiderType[]) {
+  const c = client();
+  const { data: existing } = await c
+    .from("signed_riders")
+    .select("id, rider_type, status")
+    .eq("advancing_id", advancingId);
+
+  const existingByType = new Map<string, { id: string; status: string }>();
+  for (const r of existing ?? []) existingByType.set(r.rider_type, { id: r.id, status: r.status });
+
+  const desired = new Set(riderTypes);
+
+  // Insert ontbrekende
+  const toInsert = riderTypes
+    .filter((rt) => !existingByType.has(rt))
+    .map((rt) => ({ advancing_id: advancingId, rider_type: rt, status: "pending" }));
+  if (toInsert.length > 0) {
+    await c.from("signed_riders").insert(toInsert);
+  }
+
+  // Verwijder rijen die niet meer geselecteerd zijn EN nog pending (niet teruggehaald als al getekend)
+  const toDeleteIds: string[] = [];
+  for (const [rt, row] of existingByType.entries()) {
+    if (!desired.has(rt as RiderType) && row.status === "pending") {
+      toDeleteIds.push(row.id);
+    }
+  }
+  if (toDeleteIds.length > 0) {
+    await c.from("signed_riders").delete().in("id", toDeleteIds);
+  }
 }
 
 export async function deleteOrganization(id: string) {
@@ -1178,7 +1351,7 @@ export async function confirmBooking(bookingId: string): Promise<{ advancingId: 
   const { data: booking, error: bErr } = await c.from("bookings")
     .update({ status: "advancing", confirmed_at: new Date().toISOString() })
     .eq("id", bookingId)
-    .select("id, artist_id, show_type, show_date")
+    .select("id, artist_id, festival_id, show_type, show_date, venue_city, selected_riders")
     .single();
   if (bErr || !booking) throw bErr ?? new Error("booking not found");
 
@@ -1227,11 +1400,13 @@ export async function confirmBooking(bookingId: string): Promise<{ advancingId: 
     await c.from("advancing_tech_items").insert(techRows);
   }
 
-  // 6) Signed riders skeleton (technical + hospitality)
-  await c.from("signed_riders").insert([
-    { advancing_id: adv.id, rider_type: "technical", status: "pending" },
-    { advancing_id: adv.id, rider_type: "hospitality", status: "pending" },
-  ]);
+  // 6) Signed riders skeleton — uit selected_riders, fallback technical+hospitality.
+  const selected: RiderType[] = Array.isArray(booking.selected_riders) && booking.selected_riders.length > 0
+    ? (booking.selected_riders as RiderType[])
+    : ["technical", "hospitality"];
+  await c.from("signed_riders").insert(
+    selected.map((rt) => ({ advancing_id: adv.id, rider_type: rt, status: "pending" })),
+  );
 
   // 7) Booking crew from artist crew defaults
   const { data: defaults } = await c.from("artist_crew").select("id, role, name").eq("artist_id", booking.artist_id).eq("is_default", true);
@@ -1276,6 +1451,39 @@ export async function confirmBooking(bookingId: string): Promise<{ advancingId: 
   ]);
 
   await logActivity(adv.id, "System", "system", "status_changed", undefined, "Advancing gestart - defaults toegepast");
+
+  // 9) Dropbox show-folder + 9 sub-mappen aanmaken (best-effort, mag falen
+  // zonder confirm te blokkeren). Skipt automatisch als artiest niet gekoppeld.
+  try {
+    const { data: artistDropbox } = await c.from("artists")
+      .select("dropbox_refresh_token, dropbox_artist_folder")
+      .eq("id", booking.artist_id)
+      .maybeSingle();
+
+    if (artistDropbox?.dropbox_refresh_token) {
+      const { data: festival } = await c.from("festivals")
+        .select("name, location")
+        .eq("id", booking.festival_id)
+        .maybeSingle();
+
+      const { buildShowFolderName, createShowStructure } = await import("./dropbox");
+      const showFolderName = buildShowFolderName({
+        festival_name: festival?.name ?? "Show",
+        show_date: booking.show_date ?? undefined,
+        city: booking.venue_city ?? festival?.location ?? undefined,
+      });
+      const result = await createShowStructure(booking.artist_id, showFolderName);
+      const artistRoot = artistDropbox.dropbox_artist_folder ?? "";
+      const relativeShowFolder = artistRoot && result.showPath.startsWith(artistRoot)
+        ? result.showPath.slice(artistRoot.length)
+        : result.showPath;
+      await c.from("advancings").update({ dropbox_show_folder: relativeShowFolder }).eq("id", adv.id);
+      await logActivity(adv.id, "System", "system", "dropbox_folder_created", undefined, result.showPath);
+    }
+  } catch (e: any) {
+    // Niet-fataal: confirm slaagt, sync gebeurt later bij eerste upload.
+    await logActivity(adv.id, "System", "system", "dropbox_folder_failed", undefined, e?.message ?? "unknown");
+  }
 
   return { advancingId: adv.id };
 }

@@ -88,23 +88,30 @@ function ItemRow({ item }: { item: AdvancingTechItem }) {
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {STATUS_BUTTONS.map((btn) => (
-            <button
-              key={btn.status}
-              type="button"
-              disabled={pending}
-              onClick={() => {
-                if (btn.status === "alternative_offered") {
-                  setShowAltForm(true);
-                } else {
-                  handleStatus(btn.status);
-                }
-              }}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 whitespace-nowrap ${btn.tone}`}
-            >
-              {btn.label}
-            </button>
-          ))}
+          {STATUS_BUTTONS.map((btn) => {
+            const isActive =
+              btn.status === item.status ||
+              (btn.status === "confirmed" && item.status === "accepted");
+            const anyChosen = item.status !== "requested";
+            const dim = anyChosen && !isActive;
+            return (
+              <button
+                key={btn.status}
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  if (btn.status === "alternative_offered") {
+                    setShowAltForm(true);
+                  } else {
+                    handleStatus(btn.status);
+                  }
+                }}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 whitespace-nowrap ${btn.tone} ${dim ? "opacity-20 hover:opacity-100" : ""}`}
+              >
+                {btn.label}
+              </button>
+            );
+          })}
         </div>
       </div>
       {showAltForm && (
