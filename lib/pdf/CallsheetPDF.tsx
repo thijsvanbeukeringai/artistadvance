@@ -375,88 +375,97 @@ export function CallsheetPDF({ detail, timeline }: { detail: AdvancingDetail; ti
           <SectionHead title={`Touring party (${booking_crew.filter((c) => c.is_traveling).length}/${booking_crew.length})`} />
           {booking_crew.length === 0 ? (
             <Text style={s.empty}>Geen touring party vastgelegd.</Text>
-          ) : (
-            <View style={s.crewTable}>
-              <View style={s.crewHead}>
-                <Text style={[s.crewHeadCell, { width: 40 }]}>Rol</Text>
-                <Text style={[s.crewHeadCell, { flexGrow: 2 }]}>Naam</Text>
-                <Text style={[s.crewHeadCell, { flexGrow: 2 }]}>Functie</Text>
-                <Text style={[s.crewHeadCell, { width: 50 }]}>Reist</Text>
-                <Text style={[s.crewHeadCell, { width: 60 }]}>Flight</Text>
-                <Text style={[s.crewHeadCell, { flexGrow: 2 }]}>Notitie</Text>
-              </View>
-              {booking_crew.map((c, i) => (
-                <View key={c.id} style={[s.crewRow, i % 2 === 1 ? s.crewRowAlt : {}]}>
-                  <View style={{ width: 40 }}><Text style={s.roleTag}>{c.role.toUpperCase()}</Text></View>
-                  <Text style={[{ flexGrow: 2 }, s.bold]}>{c.name}</Text>
-                  <Text style={[{ flexGrow: 2, color: C.ink500 }]}>{CREW_ROLE_LABELS[c.role] ?? c.role}</Text>
-                  <Text style={[{ width: 50, color: c.is_traveling ? C.emerald : C.ink400, fontWeight: 700 }]}>{c.is_traveling ? "Ja" : "Nee"}</Text>
-                  <View style={{ width: 60 }}><Pill status={c.flight_status} /></View>
-                  <Text style={[{ flexGrow: 2, color: C.ink500 }]}>{c.notes ?? "-"}</Text>
+          ) : (() => {
+            const hasNotes = booking_crew.some((c) => !!c.notes && c.notes.trim() !== "");
+            const hasFlightStatus = booking_crew.some((c) => c.flight_status && c.flight_status !== "n/a");
+            return (
+              <View style={s.crewTable}>
+                <View style={s.crewHead}>
+                  <Text style={[s.crewHeadCell, { width: 44 }]}>Rol</Text>
+                  <Text style={[s.crewHeadCell, { flexGrow: 2 }]}>Naam</Text>
+                  <Text style={[s.crewHeadCell, { flexGrow: 2 }]}>Functie</Text>
+                  <Text style={[s.crewHeadCell, { width: 44 }]}>Reist</Text>
+                  {hasFlightStatus && <Text style={[s.crewHeadCell, { width: 70 }]}>Vlucht</Text>}
+                  {hasNotes && <Text style={[s.crewHeadCell, { flexGrow: 2 }]}>Notitie</Text>}
                 </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Contacts */}
-        <View style={[s.twoCol, { marginBottom: 14 }]}>
-          <View style={s.col}>
-            <SectionHead title={`Artist contacten (${artist_contacts.length})`} />
-            {artist_contacts.length === 0 ? <Text style={s.empty}>Geen contacten.</Text> :
-              artist_contacts.map((c) => (
-                <View key={c.id} style={s.contactCard}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text style={s.contactName}>{c.name}</Text>
-                    {c.is_onsite && <Text style={[s.pill, s.pillOk]}>ON-SITE</Text>}
+                {booking_crew.map((c, i) => (
+                  <View key={c.id} style={[s.crewRow, i % 2 === 1 ? s.crewRowAlt : {}]}>
+                    <View style={{ width: 44 }}><Text style={s.roleTag}>{c.role.toUpperCase()}</Text></View>
+                    <Text style={[{ flexGrow: 2 }, s.bold]}>{c.name}</Text>
+                    <Text style={[{ flexGrow: 2, color: C.ink500 }]}>{CREW_ROLE_LABELS[c.role] ?? c.role}</Text>
+                    <Text style={[{ width: 44, color: c.is_traveling ? C.emerald : C.ink400, fontWeight: 700 }]}>{c.is_traveling ? "Ja" : "Nee"}</Text>
+                    {hasFlightStatus && (
+                      <View style={{ width: 70 }}>
+                        {c.flight_status && c.flight_status !== "n/a" ? <Pill status={c.flight_status} /> : <Text style={s.empty}> </Text>}
+                      </View>
+                    )}
+                    {hasNotes && <Text style={[{ flexGrow: 2, color: C.ink500 }]}>{c.notes ?? ""}</Text>}
                   </View>
-                  <Text style={s.contactRole}>{c.role}</Text>
-                  {(c.email || c.phone) && (
-                    <Text style={s.contactDetail}>{[c.email, c.phone].filter(Boolean).join("  ·  ")}</Text>
-                  )}
-                </View>
-              ))
-            }
-          </View>
-          <View style={s.col}>
-            <SectionHead title={`Festival contacten (${festival_contacts.length})`} />
-            {festival_contacts.length === 0 ? <Text style={s.empty}>Geen contacten.</Text> :
-              festival_contacts.map((c) => (
-                <View key={c.id} style={s.contactCard}>
-                  <Text style={s.contactName}>{c.name}</Text>
-                  <Text style={s.contactRole}>{c.role}</Text>
-                  {(c.email || c.phone) && (
-                    <Text style={s.contactDetail}>{[c.email, c.phone].filter(Boolean).join("  ·  ")}</Text>
-                  )}
-                </View>
-              ))
-            }
-          </View>
+                ))}
+              </View>
+            );
+          })()}
         </View>
 
-        {/* Hospitality */}
-        <View style={s.sectionWrap}>
-          <SectionHead title="Hospitality" />
-          <View style={s.glanceRow}>
-            <View style={s.glance}>
-              <Text style={s.glanceLabel}>Party size</Text>
-              <Text style={s.glanceValue}>{hospitality.party_size ?? "-"}</Text>
-            </View>
-            <View style={s.glance}>
-              <Text style={s.glanceLabel}>Hot meal</Text>
-              <Text style={s.glanceValue}>{hospitality.hot_meal_required ? "Ja" : "Nee"}</Text>
-            </View>
-            <View style={s.glance}>
-              <Text style={s.glanceLabel}>Dressing rooms</Text>
-              <Text style={s.glanceValue}>{hospitality.dressing_room_count ?? "-"}</Text>
-            </View>
+        {/* Contacts — alleen als minimaal één lijst vulling heeft */}
+        {(artist_contacts.length > 0 || festival_contacts.length > 0) && (
+          <View style={[s.twoCol, { marginBottom: 14 }]}>
+            {artist_contacts.length > 0 && (
+              <View style={s.col}>
+                <SectionHead title={`Artist contacten (${artist_contacts.length})`} />
+                {artist_contacts.map((c) => (
+                  <View key={c.id} style={s.contactCard}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text style={s.contactName}>{c.name}</Text>
+                      {c.is_onsite && <Text style={[s.pill, s.pillOk]}>ON-SITE</Text>}
+                    </View>
+                    <Text style={s.contactRole}>{c.role}</Text>
+                    {(c.email || c.phone) && (
+                      <Text style={s.contactDetail}>{[c.email, c.phone].filter(Boolean).join("  ·  ")}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+            {festival_contacts.length > 0 && (
+              <View style={s.col}>
+                <SectionHead title={`Festival contacten (${festival_contacts.length})`} />
+                {festival_contacts.map((c) => (
+                  <View key={c.id} style={s.contactCard}>
+                    <Text style={s.contactName}>{c.name}</Text>
+                    <Text style={s.contactRole}>{c.role}</Text>
+                    {(c.email || c.phone) && (
+                      <Text style={s.contactDetail}>{[c.email, c.phone].filter(Boolean).join("  ·  ")}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
-          {hospitality.specific_requests && (
-            <Text style={s.meta}>
-              <Text style={s.metaBold}>Specifieke verzoeken:</Text> {hospitality.specific_requests}
-            </Text>
-          )}
-        </View>
+        )}
+
+        {/* Hospitality — compacte inline KV ipv 3 grote tegels */}
+        {(hospitality.party_size != null || hospitality.hot_meal_required || hospitality.dressing_room_count != null || hospitality.specific_requests) && (
+          <View style={s.sectionWrap}>
+            <SectionHead title="Hospitality" />
+            <View style={{ flexDirection: "row", gap: 18, flexWrap: "wrap", marginBottom: hospitality.specific_requests ? 6 : 0 }}>
+              {hospitality.party_size != null && (
+                <Text style={s.meta}><Text style={s.glanceLabel}>Party  </Text><Text style={s.bold}>{hospitality.party_size}</Text></Text>
+              )}
+              {hospitality.hot_meal_required != null && (
+                <Text style={s.meta}><Text style={s.glanceLabel}>Hot meal  </Text><Text style={s.bold}>{hospitality.hot_meal_required ? "Ja" : "Nee"}</Text></Text>
+              )}
+              {hospitality.dressing_room_count != null && (
+                <Text style={s.meta}><Text style={s.glanceLabel}>Dressing rooms  </Text><Text style={s.bold}>{hospitality.dressing_room_count}</Text></Text>
+              )}
+            </View>
+            {hospitality.specific_requests && (
+              <Text style={s.meta}>
+                <Text style={s.metaBold}>Specifieke verzoeken:</Text> {hospitality.specific_requests}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Visa */}
         {visa && (visa.visa_required || visa.work_permit_required) && (
