@@ -14,6 +14,8 @@ export default function BookingEditor({
   festivals: Festival[];
   stages: Stage[];
 }) {
+  const advanceOnly = booking.advance_only ?? false;
+
   // Show details
   const [festivalId, setFestivalId] = useState(booking.festival_id);
   const [stageId, setStageId] = useState(booking.stage_id);
@@ -208,7 +210,8 @@ export default function BookingEditor({
         </div>
       </section>
 
-      {/* Deal economics */}
+      {/* Deal economics — agency-only */}
+      {!advanceOnly && (
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
         <header className="px-5 py-3 border-b border-ink-200 bg-ink-50">
           <h3 className="font-bold text-ink-900 text-sm">Deal economics (EUR)</h3>
@@ -267,8 +270,10 @@ export default function BookingEditor({
           </div>
         </div>
       </section>
+      )}
 
-      {/* Hold management */}
+      {/* Hold management — agency-only */}
+      {!advanceOnly && (
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
         <header className="px-5 py-3 border-b border-ink-200 bg-ink-50">
           <h3 className="font-bold text-ink-900 text-sm">Hold management</h3>
@@ -297,8 +302,10 @@ export default function BookingEditor({
           </Field>
         </div>
       </section>
+      )}
 
-      {/* Radius / exclusivity */}
+      {/* Radius / exclusivity — agency-only */}
+      {!advanceOnly && (
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
         <header className="px-5 py-3 border-b border-ink-200 bg-ink-50">
           <h3 className="font-bold text-ink-900 text-sm">Radius / exclusivity</h3>
@@ -323,6 +330,7 @@ export default function BookingEditor({
           </Field>
         </div>
       </section>
+      )}
 
       {error && (
         <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800">{error}</div>

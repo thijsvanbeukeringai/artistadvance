@@ -76,6 +76,11 @@ import {
   updateLaunchDraft,
   commitLaunch,
   logLaunchEvent,
+  findArtistByIntakeSlug,
+  submitBookingIntake,
+  setArtistIntakeSettings,
+  acceptBookingIntake,
+  declineBookingIntake,
 } from "./db";
 import { readAccount } from "./account";
 import { loadSnapshot } from "./snapshot";
@@ -1650,4 +1655,84 @@ export async function commitLaunchAction(
   revalidatePath(`/bookings/${bookingId}/launch`);
   if (r.ok) revalidatePath(`/advancings/${r.advancingId}`);
   return r;
+}
+
+// ============================================================================
+// Intake-link: publieke submission + artist accept/decline
+// ============================================================================
+
+export async function submitIntakeAction(slug: string, formData: FormData) {
+  const artist = await findArtistByIntakeSlug(slug);
+  if (!artist || !artist.intake_enabled) {
+    return { ok: false as const, error: "Intake niet beschikbaar" };
+  }
+  const festivalName = String(formData.get("festival_name") || "").trim();
+  const promoterName = String(formData.get("promoter_name") || "").trim();
+  const promoterEmail = String(formData.get("promoter_email") || "").trim();
+  const showDate = String(formData.get("show_date") || "").trim();
+  if (!festivalName || !promoterName || !promoterEmail || !showDate) {
+    return { ok: false as const, error: "Festival, datum, naam en email zijn verplicht" };
+  }
+  const headers = await import("next/headers").then((m) => m.headers());
+  const ip = headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const ua = headers.get("user-agent") ?? null;
+
+  await submitBookingIntake({
+    artist_id: artist.id,
+    festival_name: festivalName,
+    stage_name: String(formData.get("stage_name") || "").trim() || undefined,
+    show_date: showDate,
+    show_time: String(formData.get("show_time") || "").trim() || undefined,
+    set_duration_minutes: formData.get("set_duration_minutes")
+      ? Number(formData.get("set_duration_minutes"))
+      : undefined,
+    show_type: String(formData.get("show_type") || "club"),
+    venue_city: String(formData.get("venue_city") || "").trim() || undefined,
+    venue_country: String(formData.get("venue_country") || "").trim() || undefined,
+    fee: formData.get("fee") ? Number(formData.get("fee")) : undefined,
+    promoter_name: promoterName,
+    promoter_email: promoterEmail,
+    promoter_phone: String(formData.get("promoter_phone") || "").trim() || undefined,
+    promoter_company: String(formData.get("promoter_company") || "").trim() || undefined,
+    notes: String(formData.get("notes") || "").trim() || undefined,
+    ip_address: ip ?? undefined,
+    user_agent: ua ?? undefined,
+  });
+  return { ok: true as const };
+}
+
+export async function updateArtistIntakeAction(
+  artistId: string,
+  patch: { intake_slug?: string | null; intake_enabled?: boolean },
+) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  if (patch.intake_slug !== undefined) {
+    const slug = (patch.intake_slug ?? "").toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    patch.intake_slug = slug || null;
+  }
+  await setArtistIntakeSettings(artistId, patch);
+  revalidatePath(`/artists/${artistId}/settings`);
+  return { ok: true as const };
+}
+
+export async function acceptIntakeAction(intakeId: string, artistId: string) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  try {
+    const { bookingId } = await acceptBookingIntake(intakeId);
+    revalidatePath(`/artists/${artistId}/intakes`);
+    revalidatePath(`/bookings`);
+    return { ok: true as const, bookingId };
+  } catch (e: any) {
+    return { ok: false as const, error: e?.message ?? "Accept faalde" };
+  }
+}
+
+export async function declineIntakeAction(intakeId: string, artistId: string) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  await declineBookingIntake(intakeId);
+  revalidatePath(`/artists/${artistId}/intakes`);
+  return { ok: true as const };
 }

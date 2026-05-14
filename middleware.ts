@@ -11,6 +11,7 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/portal",      // portal/[token]/*  — token serves as auth
   "/festival",    // festival/[token]/*
+  "/intake",      // intake/[slug]/*   — publieke booking-aanvraag
 ];
 
 // Specifieke API-routes die zonder login mogen (webhook + portal-side).

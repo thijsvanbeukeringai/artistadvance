@@ -1640,3 +1640,164 @@ async function logActivity(
     details,
   });
 }
+
+// ============================================================================
+// Intake-link (publieke booking-aanvraag van promoter naar artist)
+// ============================================================================
+
+export async function findArtistByIntakeSlug(slug: string): Promise<{ id: string; name: string; intake_enabled: boolean } | null> {
+  const c = client();
+  const { data, error } = await c
+    .from("artists")
+    .select("id, name, intake_enabled")
+    .eq("intake_slug", slug)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as any) ?? null;
+}
+
+export async function submitBookingIntake(payload: {
+  artist_id: string;
+  festival_name: string;
+  stage_name?: string;
+  show_date: string;
+  show_time?: string;
+  set_duration_minutes?: number;
+  show_type?: string;
+  venue_city?: string;
+  venue_country?: string;
+  fee?: number;
+  promoter_name: string;
+  promoter_email: string;
+  promoter_phone?: string;
+  promoter_company?: string;
+  notes?: string;
+  ip_address?: string;
+  user_agent?: string;
+}): Promise<string> {
+  const c = client();
+  const { data, error } = await c.from("booking_intakes").insert({
+    artist_id: payload.artist_id,
+    festival_name: payload.festival_name,
+    stage_name: payload.stage_name ?? null,
+    show_date: payload.show_date,
+    show_time: payload.show_time ?? null,
+    set_duration_minutes: payload.set_duration_minutes ?? null,
+    show_type: payload.show_type ?? "club",
+    venue_city: payload.venue_city ?? null,
+    venue_country: payload.venue_country ?? null,
+    fee: payload.fee ?? null,
+    promoter_name: payload.promoter_name,
+    promoter_email: payload.promoter_email,
+    promoter_phone: payload.promoter_phone ?? null,
+    promoter_company: payload.promoter_company ?? null,
+    notes: payload.notes ?? null,
+    ip_address: payload.ip_address ?? null,
+    user_agent: payload.user_agent ?? null,
+    status: "pending",
+  }).select("id").single();
+  if (error) throw error;
+  return data!.id;
+}
+
+export async function setArtistIntakeSettings(
+  artistId: string,
+  patch: { intake_slug?: string | null; intake_enabled?: boolean },
+): Promise<void> {
+  const c = client();
+  const { error } = await c.from("artists").update(patch).eq("id", artistId);
+  if (error) throw error;
+}
+
+/** Accepteer intake → maak festival + stage indien nodig + booking met advance_only=true. */
+export async function acceptBookingIntake(intakeId: string): Promise<{ bookingId: string }> {
+  const c = client();
+  const { data: intake, error } = await c
+    .from("booking_intakes")
+    .select("*")
+    .eq("id", intakeId)
+    .maybeSingle();
+  if (error || !intake) throw error ?? new Error("intake niet gevonden");
+  if (intake.status !== "pending") throw new Error("intake al verwerkt");
+
+  // Artist + org ophalen
+  const { data: artist } = await c.from("artists").select("organization_id").eq("id", intake.artist_id).maybeSingle();
+  if (!artist) throw new Error("artist weg");
+
+  // Festival: bestaande met zelfde naam binnen org? anders maken.
+  let festivalId: string;
+  const { data: fest } = await c
+    .from("festivals")
+    .select("id")
+    .eq("organization_id", artist.organization_id)
+    .ilike("name", intake.festival_name)
+    .maybeSingle();
+  if (fest?.id) {
+    festivalId = fest.id;
+  } else {
+    const { data: newFest, error: fErr } = await c.from("festivals").insert({
+      organization_id: artist.organization_id,
+      name: intake.festival_name,
+      location: intake.venue_city ?? null,
+      country: intake.venue_country ?? null,
+      start_date: intake.show_date,
+      end_date: intake.show_date,
+    }).select("id").single();
+    if (fErr || !newFest) throw fErr ?? new Error("festival insert failed");
+    festivalId = newFest.id;
+  }
+
+  // Stage: bestaande binnen festival? anders default "Main Stage".
+  let stageId: string;
+  const stageName = intake.stage_name ?? "Main Stage";
+  const { data: stg } = await c
+    .from("stages")
+    .select("id")
+    .eq("festival_id", festivalId)
+    .ilike("name", stageName)
+    .maybeSingle();
+  if (stg?.id) {
+    stageId = stg.id;
+  } else {
+    const { data: newStage, error: sErr } = await c.from("stages").insert({
+      festival_id: festivalId,
+      name: stageName,
+    }).select("id").single();
+    if (sErr || !newStage) throw sErr ?? new Error("stage insert failed");
+    stageId = newStage.id;
+  }
+
+  // Booking
+  const { data: booking, error: bErr } = await c.from("bookings").insert({
+    artist_id: intake.artist_id,
+    festival_id: festivalId,
+    stage_id: stageId,
+    show_type: intake.show_type ?? "club",
+    status: "draft",
+    show_date: intake.show_date,
+    show_time: intake.show_time ?? null,
+    set_duration_minutes: intake.set_duration_minutes ?? null,
+    venue_city: intake.venue_city ?? null,
+    venue_country: intake.venue_country ?? null,
+    fee: intake.fee ?? null,
+    advance_only: true,
+  }).select("id").single();
+  if (bErr || !booking) throw bErr ?? new Error("booking insert failed");
+
+  // Markeer intake als accepted
+  await c.from("booking_intakes").update({
+    status: "accepted",
+    accepted_at: new Date().toISOString(),
+    converted_booking_id: booking.id,
+  }).eq("id", intakeId);
+
+  return { bookingId: booking.id };
+}
+
+export async function declineBookingIntake(intakeId: string): Promise<void> {
+  const c = client();
+  await c.from("booking_intakes").update({
+    status: "declined",
+    declined_at: new Date().toISOString(),
+  }).eq("id", intakeId);
+}

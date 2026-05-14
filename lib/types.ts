@@ -1,6 +1,6 @@
 // Domain types - gebaseerd op spec v2.
 
-export type OrgType = "management" | "festival";
+export type OrgType = "management" | "festival" | "artist_solo";
 
 export interface Organization {
   id: string;
@@ -60,6 +60,9 @@ export interface Artist {
   /** Aanwezigheid van refresh-token = artiest is gekoppeld. */
   dropbox_connected?: boolean;
   dropbox_account_email?: string | null;
+  /** Slug voor publieke intake-URL /intake/<slug>. NULL = niet ingeschakeld. */
+  intake_slug?: string | null;
+  intake_enabled?: boolean;
   image?: string;
   defaults_hospitality?: ArtistHospitalityDefaults;
   defaults_hotel?: ArtistHotelDefaults;
@@ -100,6 +103,32 @@ export interface ArtistCrew {
 }
 
 export type ShowType = "festival" | "club" | "full_production" | "ldjv" | "venue" | "corporate" | "private";
+export type IntakeStatus = "pending" | "accepted" | "declined";
+
+export interface BookingIntake {
+  id: string;
+  artist_id: string;
+  status: IntakeStatus;
+  festival_name: string;
+  stage_name?: string;
+  show_date: string;
+  show_time?: string;
+  set_duration_minutes?: number;
+  show_type?: ShowType;
+  venue_city?: string;
+  venue_country?: string;
+  fee?: number;
+  promoter_name: string;
+  promoter_email: string;
+  promoter_phone?: string;
+  promoter_company?: string;
+  notes?: string;
+  created_at: string;
+  accepted_at?: string;
+  declined_at?: string;
+  converted_booking_id?: string;
+}
+
 export type RiderType =
   | "technical"
   | "hospitality"
@@ -253,6 +282,8 @@ export interface Booking {
   last_activity_at?: string;
   /** rider_types die voor dit show meegestuurd moeten naar het festival portal. */
   selected_riders?: RiderType[];
+  /** Show is door artist zelf aangemaakt (geen agency-deal) — verbergt commission/holds/contract velden. */
+  advance_only?: boolean;
   // Deal economics
   commission_pct?: number;
   vat_pct?: number;

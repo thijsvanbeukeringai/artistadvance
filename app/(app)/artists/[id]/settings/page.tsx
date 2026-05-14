@@ -11,6 +11,10 @@ import ContractTemplateEditor from "@/components/artistSettings/ContractTemplate
 import DropboxTree from "@/components/booking/DropboxTree";
 import DropboxConnect from "@/components/artistSettings/DropboxConnect";
 import RiderTemplatesEditor from "@/components/artistSettings/RiderTemplatesEditor";
+import IntakeLinkEditor from "@/components/artistSettings/IntakeLinkEditor";
+import IntakeInbox from "@/components/artistSettings/IntakeInbox";
+import { supabaseService } from "@/lib/supabase-service";
+import type { BookingIntake } from "@/lib/types";
 import StatusPill, { humanStatus } from "@/components/StatusPill";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +36,16 @@ export default async function ArtistSettingsPage({ params }: { params: { id: str
   const artistActivity = snap.activity
     .filter((a) => artistAdvancingIds.has(a.advancing_id))
     .slice(0, 50);
+
+  // Intakes uit DB ophalen (niet in snapshot)
+  const sb = supabaseService();
+  const { data: intakesRaw } = await sb
+    .from("booking_intakes")
+    .select("*")
+    .eq("artist_id", artist.id)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  const intakes: BookingIntake[] = (intakesRaw ?? []) as BookingIntake[];
 
   return (
     <div className="space-y-6">
@@ -104,6 +118,17 @@ export default async function ArtistSettingsPage({ params }: { params: { id: str
         artistId={artist.id}
         templates={snap.artistRiderTemplates.filter((t) => t.artist_id === artist.id)}
       />
+
+      {/* Intake-link voor publieke aanvragen */}
+      <IntakeLinkEditor
+        artistId={artist.id}
+        artistName={artist.name}
+        initialSlug={artist.intake_slug ?? null}
+        initialEnabled={!!artist.intake_enabled}
+      />
+
+      {/* Inbox van openstaande intakes */}
+      <IntakeInbox artistId={artist.id} intakes={intakes} />
 
       {/* Dropbox koppeling + folder-structuur */}
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-5 space-y-5">

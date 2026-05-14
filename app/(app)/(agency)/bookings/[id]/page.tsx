@@ -181,14 +181,16 @@ export default async function BookingDetailPage({ params }: { params: { id: stri
         </div>
 
         <div className="space-y-6">
-          {/* Contract */}
-          <ContractGeneratorBlock
-            bookingId={booking.id}
-            artistId={artist.id}
-            hasTemplate={!!(artist.contract_template_md && artist.contract_template_md.trim())}
-            currentUrl={booking.contract_pdf_url ?? null}
-            generatedAt={booking.contract_generated_at ?? null}
-          />
+          {/* Contract — agency-only */}
+          {!booking.advance_only && (
+            <ContractGeneratorBlock
+              bookingId={booking.id}
+              artistId={artist.id}
+              hasTemplate={!!(artist.contract_template_md && artist.contract_template_md.trim())}
+              currentUrl={booking.contract_pdf_url ?? null}
+              generatedAt={booking.contract_generated_at ?? null}
+            />
+          )}
 
           {/* Riders die meegestuurd worden in festival portal */}
           <RiderSelectionEditor
@@ -197,12 +199,14 @@ export default async function BookingDetailPage({ params }: { params: { id: stri
             templates={snap.artistRiderTemplates.filter((t) => t.artist_id === artist.id)}
           />
 
-          {/* Payment milestones */}
-          <BookingPaymentMilestones
-            bookingId={booking.id}
-            milestones={milestones}
-            totalFee={booking.fee ?? null}
-          />
+          {/* Payment milestones — agency-only */}
+          {!booking.advance_only && (
+            <BookingPaymentMilestones
+              bookingId={booking.id}
+              milestones={milestones}
+              totalFee={booking.fee ?? null}
+            />
+          )}
 
           {/* Tasks */}
           <BookingTasks bookingId={booking.id} tasks={tasks} />
