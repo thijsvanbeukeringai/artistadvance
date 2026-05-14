@@ -25,11 +25,20 @@ export default function DropboxConnect({
   const [folder, setFolder] = useState<string>(rootFolder ?? "");
   const [savingFolder, startSaveFolder] = useTransition();
   const [disconnecting, startDisconnect] = useTransition();
+  const [folderErr, setFolderErr] = useState<string | null>(null);
+  const [folderOk, setFolderOk] = useState(false);
 
   function onSaveFolder() {
+    setFolderErr(null);
+    setFolderOk(false);
     startSaveFolder(async () => {
-      await updateArtistDropboxFolderAction(artistId, folder || null);
-      router.refresh();
+      const r = await updateArtistDropboxFolderAction(artistId, folder || null);
+      if (!r.ok) {
+        setFolderErr(r.error ?? "Folder-aanmaak faalde");
+      } else {
+        setFolderOk(true);
+        router.refresh();
+      }
     });
   }
 
@@ -129,6 +138,16 @@ export default function DropboxConnect({
         <p className="text-[11px] text-ink-400 mt-1">
           Pad in de gekoppelde Dropbox-account waaronder show-mappen worden aangemaakt. Leeg = root.
         </p>
+        {folderErr && (
+          <div className="mt-2 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 font-mono">
+            {folderErr}
+          </div>
+        )}
+        {folderOk && (
+          <div className="mt-2 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
+            Folder klaar in Dropbox.
+          </div>
+        )}
       </div>
     </div>
   );

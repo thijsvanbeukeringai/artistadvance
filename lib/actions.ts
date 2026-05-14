@@ -1556,10 +1556,16 @@ export async function updateArtistDropboxFolderAction(artistId: string, folder: 
   const { normalizeFolderPath, ensureArtistRootFolder, isArtistConnected } = await import("./dropbox");
   const normalized = normalizeFolderPath(folder ?? "") || null;
   await updateArtist(artistId, { dropbox_artist_folder: normalized });
+  let folderError: string | null = null;
   if (normalized && (await isArtistConnected(artistId))) {
-    try { await ensureArtistRootFolder(artistId); } catch { /* niet kritiek */ }
+    try {
+      await ensureArtistRootFolder(artistId);
+    } catch (e: any) {
+      folderError = e?.message ?? "Folder-aanmaken faalde";
+    }
   }
   revalidatePath(`/artists/${artistId}/settings`);
+  if (folderError) return { ok: false as const, error: folderError };
   return { ok: true as const };
 }
 
