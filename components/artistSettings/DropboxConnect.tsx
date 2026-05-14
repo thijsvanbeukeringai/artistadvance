@@ -116,10 +116,14 @@ export default function DropboxConnect({
           <button
             type="button"
             onClick={onSaveFolder}
-            disabled={savingFolder || folder === (rootFolder ?? "")}
+            disabled={savingFolder}
             className="text-xs px-3 py-1.5 rounded-md border border-ink-200 text-ink-700 hover:bg-ink-100 transition font-semibold disabled:opacity-50"
           >
-            {savingFolder ? "Opslaan..." : "Opslaan"}
+            {savingFolder
+              ? "Bezig..."
+              : folder === (rootFolder ?? "")
+                ? "Maak folder aan"
+                : "Opslaan"}
           </button>
         </div>
         <p className="text-[11px] text-ink-400 mt-1">
