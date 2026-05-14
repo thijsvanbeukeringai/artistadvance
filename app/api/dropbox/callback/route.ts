@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { exchangeCodeForTokens, getCurrentAccountEmail, saveArtistTokens } from "@/lib/dropbox";
+import {
+  exchangeCodeForTokens,
+  getCurrentAccountEmail,
+  saveArtistTokens,
+  ensureArtistRootFolder,
+  normalizeFolderPath,
+} from "@/lib/dropbox";
+import { supabaseService } from "@/lib/supabase-service";
 import { requireArtistAccess } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +50,27 @@ export async function GET(req: NextRequest) {
       expires_in: tokens.expires_in,
       account_email: email ?? undefined,
     });
+
+    // Default artist-folder = /{artist.name} als nog niet gezet. Maak hem
+    // meteen aan in Dropbox zodat de gebruiker direct ziet dat 't werkt.
+    const c = supabaseService();
+    const { data: artist } = await c
+      .from("artists")
+      .select("name, dropbox_artist_folder")
+      .eq("id", artistId)
+      .maybeSingle();
+    if (artist && !artist.dropbox_artist_folder) {
+      const folder = normalizeFolderPath(artist.name);
+      if (folder) {
+        await c.from("artists").update({ dropbox_artist_folder: folder }).eq("id", artistId);
+      }
+    }
+    try {
+      await ensureArtistRootFolder(artistId);
+    } catch {
+      /* folder bestaat al of niet kritiek — niet falen */
+    }
+
     return backToArtist(origin, artistId, "ok");
   } catch (e: any) {
     return backToArtist(origin, artistId, "error", encodeURIComponent(e?.message ?? "exchange_failed"));

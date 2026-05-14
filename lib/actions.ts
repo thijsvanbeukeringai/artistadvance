@@ -1553,11 +1553,12 @@ export async function updateArtistManagerAction(artistId: string, patch: {
 export async function updateArtistDropboxFolderAction(artistId: string, folder: string | null) {
   const az = await requireArtistAccess(artistId);
   if (!az.ok) return { ok: false as const, error: az.error };
-  const trimmed = (folder ?? "").trim();
-  const normalized = trimmed
-    ? trimmed.startsWith("/") ? trimmed : `/${trimmed}`
-    : null;
+  const { normalizeFolderPath, ensureArtistRootFolder, isArtistConnected } = await import("./dropbox");
+  const normalized = normalizeFolderPath(folder ?? "") || null;
   await updateArtist(artistId, { dropbox_artist_folder: normalized });
+  if (normalized && (await isArtistConnected(artistId))) {
+    try { await ensureArtistRootFolder(artistId); } catch { /* niet kritiek */ }
+  }
   revalidatePath(`/artists/${artistId}/settings`);
   return { ok: true as const };
 }

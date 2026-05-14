@@ -232,6 +232,28 @@ function safeFolderSegment(name: string): string {
     .trim();
 }
 
+/** Normaliseert input naar Dropbox-pad: "/Afrojack". Leeg → "". */
+export function normalizeFolderPath(input: string | null | undefined): string {
+  const trimmed = (input ?? "").trim();
+  if (!trimmed) return "";
+  const safe = safeFolderSegment(trimmed.replace(/^\/+|\/+$/g, ""));
+  return safe ? `/${safe}` : "";
+}
+
+/**
+ * Maakt artist-root folder aan in de gekoppelde Dropbox-account. Idempotent.
+ * Returns het pad of "" als geen folder gezet.
+ */
+export async function ensureArtistRootFolder(artistId: string): Promise<string> {
+  const row = await loadArtistTokens(artistId);
+  if (!row?.dropbox_refresh_token) throw new Error("artist not connected to Dropbox");
+  const root = row.dropbox_artist_folder ?? "";
+  if (!root) return "";
+  const token = await getValidAccessToken(artistId);
+  await createFolder(token, root);
+  return root;
+}
+
 /** Bouwt de show-folder naam: "{Festival} - {YYYY-MM-DD} - {City}". */
 export function buildShowFolderName(input: { festival_name: string; show_date?: string; city?: string }): string {
   const parts: string[] = [];
