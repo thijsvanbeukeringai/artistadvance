@@ -9,6 +9,7 @@ import StatusPill, { humanStatus, statusTone } from "@/components/StatusPill";
 import ProgramTimeline from "@/components/program/ProgramTimeline";
 import { findPortalDetail, loadSnapshot } from "@/lib/snapshot";
 import AdvancingTabs, { type AdvancingTab } from "@/components/advancing/AdvancingTabs";
+import AdvancingLiveSync from "@/components/realtime/AdvancingLiveSync";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +135,7 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
 
   return (
     <div className="space-y-6">
+      <AdvancingLiveSync advancingIds={[advId]} />
       {/* HEADER */}
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-6">
         <div className="flex items-start justify-between flex-wrap gap-3">

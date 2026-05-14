@@ -117,7 +117,7 @@ async function recomputeSectionPercent(advId: string, type: SectionType): Promis
       // empty terug komt. "Sent" maar nog niet beantwoord = ~10% klaar.
       const score = items.reduce((s: number, i: any) => {
         if (i.status === "accepted") return s + 1;
-        if (i.status === "confirmed") return s + 0.85;
+        if (i.status === "confirmed") return s + 1;
         if (i.status === "alternative_offered") return s + 0.4;
         if (i.status === "not_available") return s + 0.2;
         if (i.status === "disputed") return s - 0.2;

@@ -8,6 +8,7 @@ import BookingCrewMirror from "@/components/booking/BookingCrewMirror";
 import BookingTasks from "@/components/booking/BookingTasks";
 import ContractGeneratorBlock from "@/components/booking/ContractGeneratorBlock";
 import RiderSelectionEditor from "@/components/booking/RiderSelectionEditor";
+import AdvancingLiveSync from "@/components/realtime/AdvancingLiveSync";
 import ConfirmBookingButton from "@/components/booking/ConfirmBookingButton";
 import DeleteBookingButton from "@/components/booking/DeleteBookingButton";
 import StatusPill, { statusTone } from "@/components/StatusPill";
@@ -59,6 +60,7 @@ export default async function BookingDetailPage({ params }: { params: { id: stri
 
   return (
     <div className="space-y-6">
+      {advancing && <AdvancingLiveSync advancingIds={[advancing.id]} />}
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-ink-400">
         <Link href="/bookings" className="hover:text-ink-700">Boekingen</Link>
