@@ -72,6 +72,10 @@ import {
   upsertArtistRiderTemplate,
   removeArtistRiderTemplate,
   setBookingSelectedRiders,
+  getOrCreateLaunchDraft,
+  updateLaunchDraft,
+  commitLaunch,
+  logLaunchEvent,
 } from "./db";
 import { readAccount } from "./account";
 import { loadSnapshot } from "./snapshot";
@@ -1608,4 +1612,42 @@ export async function setBookingSelectedRidersAction(bookingId: string, riderTyp
   await setBookingSelectedRiders(bookingId, riderTypes);
   revalidatePath(`/bookings/${bookingId}`);
   return { ok: true as const };
+}
+
+// ============================================================================
+// Launch wizard
+// ============================================================================
+
+export async function startLaunchAction(bookingId: string) {
+  const az = await requireBookingAccess(bookingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  const draft = await getOrCreateLaunchDraft(bookingId);
+  await logLaunchEvent(bookingId, draft.id, "launch_started");
+  return { ok: true as const, draft };
+}
+
+export async function saveLaunchStepAction(
+  bookingId: string,
+  launchId: string,
+  patch: { current_step?: number; state?: Record<string, unknown> },
+) {
+  const az = await requireBookingAccess(bookingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  await updateLaunchDraft(launchId, patch);
+  revalidatePath(`/bookings/${bookingId}/launch`);
+  return { ok: true as const };
+}
+
+export async function commitLaunchAction(
+  bookingId: string,
+  launchId: string,
+  idempotencyKey: string,
+) {
+  const az = await requireBookingAccess(bookingId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  const r = await commitLaunch(launchId, idempotencyKey);
+  revalidatePath(`/bookings/${bookingId}`);
+  revalidatePath(`/bookings/${bookingId}/launch`);
+  if (r.ok) revalidatePath(`/advancings/${r.advancingId}`);
+  return r;
 }

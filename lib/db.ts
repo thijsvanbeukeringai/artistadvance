@@ -899,6 +899,136 @@ export async function removeArtistRiderTemplate(
   await c.from("artist_rider_templates").delete().eq("id", existing.id);
 }
 
+// ============================================================================
+// Booking launch wizard (draft state + commit)
+// ============================================================================
+
+export type LaunchStatus = "draft" | "committed" | "failed";
+
+export interface LaunchDraft {
+  id: string;
+  booking_id: string;
+  current_step: number;
+  state: { selected_riders?: RiderType[]; mail?: { subject?: string; body?: string; to?: string[]; cc?: string[] } };
+  status: LaunchStatus;
+  idempotency_key: string | null;
+}
+
+export async function getOrCreateLaunchDraft(bookingId: string): Promise<LaunchDraft> {
+  const c = client();
+  // Bestaande draft hergebruiken; committed niet aanraken (history).
+  const { data: existing } = await c
+    .from("booking_launches")
+    .select("id, booking_id, current_step, state, status, idempotency_key")
+    .eq("booking_id", bookingId)
+    .eq("status", "draft")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (existing) return existing as LaunchDraft;
+
+  // Default state uit booking
+  const { data: booking } = await c
+    .from("bookings")
+    .select("selected_riders")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  const seed = {
+    selected_riders: Array.isArray(booking?.selected_riders) ? booking!.selected_riders : ["technical", "hospitality"],
+  };
+
+  const { data, error } = await c.from("booking_launches").insert({
+    booking_id: bookingId,
+    state: seed,
+    current_step: 1,
+    status: "draft",
+  }).select("id, booking_id, current_step, state, status, idempotency_key").single();
+  if (error) throw error;
+  return data as LaunchDraft;
+}
+
+export async function updateLaunchDraft(
+  launchId: string,
+  patch: { current_step?: number; state?: Record<string, unknown>; idempotency_key?: string },
+): Promise<void> {
+  const c = client();
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.current_step !== undefined) update.current_step = patch.current_step;
+  if (patch.state !== undefined) update.state = patch.state;
+  if (patch.idempotency_key !== undefined) update.idempotency_key = patch.idempotency_key;
+  const { error } = await c.from("booking_launches").update(update).eq("id", launchId);
+  if (error) throw error;
+}
+
+export async function logLaunchEvent(
+  bookingId: string,
+  launchId: string | null,
+  eventType: string,
+  payload?: Record<string, unknown>,
+): Promise<void> {
+  const c = client();
+  await c.from("booking_launch_events").insert({
+    booking_id: bookingId,
+    launch_id: launchId,
+    event_type: eventType,
+    payload: payload ?? null,
+  });
+}
+
+/**
+ * Atomic launch: zet selected_riders op booking, commit draft, en draait
+ * confirmBooking() voor de seed (advancing + Dropbox + signed_riders).
+ * Idempotency-key voorkomt dubbel-klikken.
+ */
+export async function commitLaunch(
+  launchId: string,
+  idempotencyKey: string,
+): Promise<{ ok: true; advancingId: string } | { ok: false; error: string }> {
+  const c = client();
+
+  // 1) Lees draft + check idempotency
+  const { data: draft } = await c
+    .from("booking_launches")
+    .select("id, booking_id, state, status, idempotency_key")
+    .eq("id", launchId)
+    .maybeSingle();
+  if (!draft) return { ok: false, error: "Launch draft niet gevonden" };
+  if (draft.status === "committed") {
+    // Re-entry: zoek bestaande advancing
+    const { data: adv } = await c.from("advancings").select("id").eq("booking_id", draft.booking_id).maybeSingle();
+    return adv ? { ok: true, advancingId: adv.id } : { ok: false, error: "Reeds committed maar geen advancing" };
+  }
+  if (draft.idempotency_key && draft.idempotency_key !== idempotencyKey) {
+    return { ok: false, error: "Idempotency-key conflict" };
+  }
+
+  // 2) Sla key vast (lock-ish)
+  await c.from("booking_launches").update({ idempotency_key: idempotencyKey }).eq("id", launchId);
+
+  try {
+    // 3) Persist selected_riders op booking vanuit draft.state
+    const selected = (draft.state as any)?.selected_riders as RiderType[] | undefined;
+    if (Array.isArray(selected) && selected.length > 0) {
+      await c.from("bookings").update({ selected_riders: selected }).eq("id", draft.booking_id);
+    }
+
+    // 4) confirmBooking (idempotent: als advancing al bestaat, returnt 't dezelfde)
+    const result = await confirmBooking(draft.booking_id);
+    if (!result) throw new Error("confirmBooking gaf null");
+
+    // 5) Mark committed
+    await c.from("booking_launches").update({ status: "committed", updated_at: new Date().toISOString() }).eq("id", launchId);
+    await logLaunchEvent(draft.booking_id, launchId, "launch_committed", { advancingId: result.advancingId });
+
+    return { ok: true, advancingId: result.advancingId };
+  } catch (e: any) {
+    await c.from("booking_launches").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", launchId);
+    await logLaunchEvent(draft.booking_id, launchId, "launch_failed", { error: e?.message ?? String(e) });
+    return { ok: false, error: e?.message ?? "Launch faalde" };
+  }
+}
+
 export async function setBookingSelectedRiders(
   bookingId: string,
   riderTypes: RiderType[],

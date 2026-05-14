@@ -105,7 +105,12 @@ export default async function BookingDetailPage({ params }: { params: { id: stri
           </Link>
           {isDraft ? (
             <>
-              <ConfirmBookingButton bookingId={booking.id} label="Bevestig boeking" />
+              <Link
+                href={`/bookings/${booking.id}/launch`}
+                className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600 transition font-bold"
+              >
+                Bevestig & launch →
+              </Link>
               <DeleteBookingButton bookingId={booking.id} artistId={artist.id} />
             </>
           ) : (
