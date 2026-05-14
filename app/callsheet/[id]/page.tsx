@@ -236,7 +236,7 @@ export default async function CallsheetPage({ params }: { params: { id: string }
       </table>
 
       <footer className="meta" style={{ marginTop: 32, paddingTop: 12, borderTop: "1px solid #e3e6eb", textAlign: "center" }}>
-        ArtistAdvance · Gegenereerd {new Date().toLocaleString("nl-NL")} · Portal: /portal/{detail.advancing.portal_token}
+        ArtistAdvance · Gegenereerd {new Date().toLocaleString("nl-NL")} · Portal: /festival/{detail.advancing.portal_token}
       </footer>
     </div>
   );

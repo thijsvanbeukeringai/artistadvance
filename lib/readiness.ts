@@ -101,7 +101,7 @@ export interface ReadinessResult {
   sectionsScore: number;
   ridersScore: number;
   buckets: BucketSignal[];
-  fullSections: { type: SectionType; percent: number; status: AdvancingSection["status"]; tone: SectionTone }[];
+  fullSections: { type: SectionType; percent: number; status: AdvancingSection["status"]; tone: SectionTone; itemCount?: number }[];
   riders: {
     items: RiderSignal[];
     accepted: number;
@@ -162,6 +162,10 @@ function urgencyMultiplier(level: UrgencyLevel): number {
 
 function buildBucketSignals(snap: Snapshot, advId: string, visaApplicable: boolean) {
   const stored = snap.sections.filter((s) => s.advancing_id === advId);
+  const techItemsByCat = new Map<string, number>();
+  for (const t of snap.techItems.filter((x) => x.advancing_id === advId)) {
+    techItemsByCat.set(t.category, (techItemsByCat.get(t.category) ?? 0) + 1);
+  }
 
   const grouped: Record<ReadinessBucket, { sumPercent: number; count: number; complete: number }> = {
     tech: { sumPercent: 0, count: 0, complete: 0 },
@@ -189,6 +193,7 @@ function buildBucketSignals(snap: Snapshot, advId: string, visaApplicable: boole
       percent,
       status,
       tone: sectionTone(percent, status),
+      itemCount: techItemsByCat.get(s.section_type),
     });
   }
 

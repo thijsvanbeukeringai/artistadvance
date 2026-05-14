@@ -229,7 +229,7 @@ function TechTab({
             return (
               <Link
                 key={s.id}
-                href={`/portal/${advancing.portal_token}/${s.section_type}`}
+                href={`/festival/${advancing.portal_token}`}
                 className="group bg-white border border-ink-200 rounded-xl p-3 shadow-card hover:border-brand-400 hover:shadow-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2 block"
               >
                 <div className="flex items-center justify-between gap-2">

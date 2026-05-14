@@ -42,7 +42,7 @@ type ActionItem = {
 
 function buildActionQueue(readiness: ReadinessResult, portalToken?: string): ActionItem[] {
   const items: ActionItem[] = [];
-  const portalBase = portalToken ? `/portal/${portalToken}` : null;
+  const portalBase = portalToken ? `/festival/${portalToken}` : null;
   const festivalBase = portalToken ? `/festival/${portalToken}` : null;
   const sectionsByType = new Map(readiness.fullSections.map((s) => [s.type, s]));
 
@@ -81,22 +81,26 @@ function buildActionQueue(readiness: ReadinessResult, portalToken?: string): Act
   // Buckets <100%: toon de ontbrekende sub-secties expliciet
   for (const b of readiness.buckets) {
     if (b.percent >= 100) continue;
+    const isTech = b.bucket === "tech";
     const subs = (SECTIONS_BY_BUCKET[b.bucket] ?? [])
       .map((t) => sectionsByType.get(t))
-      .filter((s): s is NonNullable<typeof s> => !!s && s.percent < 100);
+      .filter((s): s is NonNullable<typeof s> => {
+        if (!s || s.percent >= 100) return false;
+        // Tech-secties zonder requirements verbergen — niets om op te bevestigen.
+        if (isTech && (s.itemCount ?? 0) === 0) return false;
+        return true;
+      });
 
-    // Tech-bucket: percentage komt uit advancing_tech_items.status. Items
-    // met status "requested" (= verstuurd naar festival, wachten op confirm)
-    // tellen voor 10%. Dus een lage tech-percent = WACHTEN OP FESTIVAL,
-    // niet management. Andere buckets zijn management-side (form-vullen).
-    const isFestivalSide = b.bucket === "tech";
+    // Geen onbevestigde subs → geen action item nodig
+    if (subs.length === 0) continue;
+    const isFestivalSide = isTech;
 
     const subItems: SubAction[] = subs.map((s) => ({
       label: SECTION_LABELS[s.type] ?? s.type,
       hint: s.percent > 0
         ? (isFestivalSide ? `${s.percent}% — festival nog niet alle items bevestigd` : `${s.percent}% klaar`)
         : (isFestivalSide ? "festival heeft nog niets bevestigd" : "nog niet ingevuld"),
-      href: portalBase ? `${portalBase}/${s.type}` : undefined,
+      href: portalBase ?? undefined,
       tone: s.tone === "empty" ? "bad" : "warn",
     }));
 
