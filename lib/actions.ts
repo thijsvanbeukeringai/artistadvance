@@ -776,14 +776,36 @@ export async function addTechRequirementAction(artistId: string, formData: FormD
   if (!az.ok) return { ok: false as const, error: az.error };
   const description = String(formData.get("item_description") || "").trim();
   if (!description) return { ok: false, error: "Beschrijving verplicht" };
+  const showType = String(formData.get("show_type") || "festival") as ShowType;
   await addTechRequirement({
     artist_id: artistId,
-    show_type: String(formData.get("show_type") || "festival") as ShowType,
+    show_type: showType,
     category: String(formData.get("category") || "dj_gear") as TechCategory,
     item_description: description,
     is_mandatory: formData.get("is_mandatory") === "on",
     notes: String(formData.get("notes") || "").trim() || undefined,
   });
+
+  // Auto-sync naar lopende advancings van deze artist+show_type
+  // zodat festival portals direct de nieuwe items te zien krijgen.
+  try {
+    const { supabaseService } = await import("./supabase-service");
+    const c = supabaseService();
+    const { data: advs } = await c
+      .from("advancings")
+      .select("id, booking_id, status, bookings!inner(artist_id, show_type)")
+      .neq("status", "completed")
+      .eq("bookings.artist_id", artistId)
+      .eq("bookings.show_type", showType);
+    for (const adv of advs ?? []) {
+      await syncAdvancingTechFromArtistTemplate(adv.id);
+      revalidatePath(`/advancings/${adv.id}`);
+    }
+  } catch (e) {
+    // niet kritiek — primary write is gelukt
+    console.error("auto-sync tech requirement failed", e);
+  }
+
   revalidatePath(`/artists/${artistId}/templates`);
   return { ok: true };
 }
