@@ -786,23 +786,29 @@ export async function addTechRequirementAction(artistId: string, formData: FormD
     notes: String(formData.get("notes") || "").trim() || undefined,
   });
 
-  // Auto-sync naar lopende advancings van deze artist+show_type
-  // zodat festival portals direct de nieuwe items te zien krijgen.
+  // Auto-sync naar lopende advancings van deze artist+show_type. 2-staps query
+  // (geen PostgREST nested filter) zodat 't betrouwbaar werkt.
   try {
     const { supabaseService } = await import("./supabase-service");
     const c = supabaseService();
-    const { data: advs } = await c
-      .from("advancings")
-      .select("id, booking_id, status, bookings!inner(artist_id, show_type)")
-      .neq("status", "completed")
-      .eq("bookings.artist_id", artistId)
-      .eq("bookings.show_type", showType);
-    for (const adv of advs ?? []) {
-      await syncAdvancingTechFromArtistTemplate(adv.id);
-      revalidatePath(`/advancings/${adv.id}`);
+    const { data: bookings } = await c
+      .from("bookings")
+      .select("id")
+      .eq("artist_id", artistId)
+      .eq("show_type", showType);
+    const bookingIds = (bookings ?? []).map((b: any) => b.id);
+    if (bookingIds.length > 0) {
+      const { data: advs } = await c
+        .from("advancings")
+        .select("id")
+        .in("booking_id", bookingIds)
+        .neq("status", "completed");
+      for (const adv of advs ?? []) {
+        await syncAdvancingTechFromArtistTemplate(adv.id);
+        revalidatePath(`/advancings/${adv.id}`);
+      }
     }
   } catch (e) {
-    // niet kritiek — primary write is gelukt
     console.error("auto-sync tech requirement failed", e);
   }
 

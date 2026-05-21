@@ -1400,14 +1400,84 @@ export async function addTechRequirement(payload: {
 
 export async function updateTechRequirement(id: string, patch: { item_description?: string; is_mandatory?: boolean; notes?: string; category?: TechCategory }) {
   const c = client();
+  // Vooraf: ouder description ophalen zodat we hem in advancing_tech_items kunnen matchen.
+  const { data: before } = await c
+    .from("artist_tech_requirements")
+    .select("artist_id, show_type, category, item_description")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await c.from("artist_tech_requirements").update(patch).eq("id", id);
   if (error) throw error;
+
+  // Propageer wijziging naar advancing_tech_items rows die nog op 'requested' staan.
+  if (before && (patch.item_description !== undefined || patch.is_mandatory !== undefined || patch.notes !== undefined || patch.category !== undefined)) {
+    const update: Record<string, unknown> = {};
+    if (patch.item_description !== undefined) update.item_description = patch.item_description;
+    if (patch.is_mandatory !== undefined) update.is_mandatory = patch.is_mandatory;
+    if (patch.notes !== undefined) update.artist_notes = patch.notes;
+    if (patch.category !== undefined) update.category = patch.category;
+
+    const { data: bookings } = await c
+      .from("bookings")
+      .select("id")
+      .eq("artist_id", before.artist_id)
+      .eq("show_type", before.show_type);
+    const bookingIds = (bookings ?? []).map((b: any) => b.id);
+    const { data: advs } = bookingIds.length === 0 ? { data: [] as any[] } : await c
+      .from("advancings")
+      .select("id")
+      .in("booking_id", bookingIds)
+      .neq("status", "completed");
+    const advIds = (advs ?? []).map((a: any) => a.id);
+    if (advIds.length > 0 && Object.keys(update).length > 0) {
+      await c.from("advancing_tech_items").update(update)
+        .in("advancing_id", advIds)
+        .eq("category", before.category)
+        .eq("item_description", before.item_description)
+        .eq("status", "requested");
+    }
+  }
 }
 
 export async function removeTechRequirement(id: string) {
   const c = client();
+  // Voorop: row-info halen om matching advancing_tech_items te vinden.
+  const { data: before } = await c
+    .from("artist_tech_requirements")
+    .select("artist_id, show_type, category, item_description")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await c.from("artist_tech_requirements").delete().eq("id", id);
   if (error) throw error;
+
+  // Verwijder matching items in lopende advancings — alleen als nog op 'requested'
+  // (festival heeft nog niets bevestigd). Anders laten staan om data-verlies te
+  // voorkomen.
+  if (before) {
+    const { data: bookings } = await c
+      .from("bookings")
+      .select("id")
+      .eq("artist_id", before.artist_id)
+      .eq("show_type", before.show_type);
+    const bookingIds = (bookings ?? []).map((b: any) => b.id);
+    if (bookingIds.length > 0) {
+      const { data: advs } = await c
+        .from("advancings")
+        .select("id")
+        .in("booking_id", bookingIds)
+        .neq("status", "completed");
+      const advIds = (advs ?? []).map((a: any) => a.id);
+      if (advIds.length > 0) {
+        await c.from("advancing_tech_items").delete()
+          .in("advancing_id", advIds)
+          .eq("category", before.category)
+          .eq("item_description", before.item_description)
+          .eq("status", "requested");
+      }
+    }
+  }
 }
 
 // ============================================================================
