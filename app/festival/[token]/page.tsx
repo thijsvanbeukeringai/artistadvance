@@ -28,6 +28,10 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
   if (!detail) return notFound();
   const advId = detail.advancing.id;
   const tech = snap.techItems.filter((t) => t.advancing_id === advId);
+  const customCatLabels: Record<string, string> = {};
+  for (const c of snap.artistCustomTechCategories.filter((c) => c.artist_id === detail.artist.id)) {
+    customCatLabels[c.key] = c.label;
+  }
   const hidden = new Set<string>(detail.advancing.festival_portal_hidden ?? []);
   const show = (k: string) => !hidden.has(k);
 
@@ -71,7 +75,7 @@ export default async function FestivalPortalPage({ params }: { params: { token: 
       label: "Technical",
       iconPath: ICON.tech,
       badge: String(summary.total),
-      content: <PleaseConfirmList items={tech} />,
+      content: <PleaseConfirmList items={tech} customCategoryLabels={customCatLabels} />,
     });
   }
 

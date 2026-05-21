@@ -1642,6 +1642,38 @@ async function logActivity(
 }
 
 // ============================================================================
+// Custom tech-categorieen per artist
+// ============================================================================
+
+export async function addArtistCustomTechCategory(
+  artistId: string,
+  key: string,
+  label: string,
+): Promise<void> {
+  const c = client();
+  const { data: existing } = await c
+    .from("artist_custom_tech_categories")
+    .select("sort_order")
+    .eq("artist_id", artistId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  const next = (existing?.[0]?.sort_order ?? 0) + 1;
+  const { error } = await c.from("artist_custom_tech_categories").insert({
+    artist_id: artistId,
+    key,
+    label,
+    sort_order: next,
+  });
+  if (error) throw error;
+}
+
+export async function removeArtistCustomTechCategory(id: string): Promise<void> {
+  const c = client();
+  const { error } = await c.from("artist_custom_tech_categories").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ============================================================================
 // Intake-link (publieke booking-aanvraag van promoter naar artist)
 // ============================================================================
 

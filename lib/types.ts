@@ -103,6 +103,14 @@ export interface ArtistCrew {
 }
 
 export type ShowType = "festival" | "club" | "full_production" | "ldjv" | "venue" | "corporate" | "private";
+export interface ArtistCustomTechCategory {
+  id: string;
+  artist_id: string;
+  key: string;
+  label: string;
+  sort_order: number;
+}
+
 export type IntakeStatus = "pending" | "accepted" | "declined";
 
 export interface BookingIntake {

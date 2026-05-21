@@ -21,22 +21,30 @@ const STATUS_TONE_PILL: Record<TechItemStatus, { bg: string; text: string; label
   disputed: { bg: "bg-red-50", text: "text-red-700", label: "Disputed" },
 };
 
-export default function PleaseConfirmList({ items }: { items: AdvancingTechItem[] }) {
-  const grouped: Record<TechCategory, AdvancingTechItem[]> = {
-    dj_gear: [], monitors: [], audio: [], light: [], video: [], lasers: [],
-    sfx_pyro: [], stage: [], ethernet: [], communication: [], power: [], backline: [],
-  };
-  for (const item of items) grouped[item.category]?.push(item);
+export default function PleaseConfirmList({
+  items,
+  customCategoryLabels = {},
+}: {
+  items: AdvancingTechItem[];
+  customCategoryLabels?: Record<string, string>;
+}) {
+  const grouped = new Map<string, AdvancingTechItem[]>();
+  for (const item of items) {
+    if (!grouped.has(item.category)) grouped.set(item.category, []);
+    grouped.get(item.category)!.push(item);
+  }
+  const labelFor = (key: string) =>
+    customCategoryLabels[key] ?? SECTION_LABELS[key as TechCategory] ?? key;
 
   return (
     <div className="space-y-6">
-      {Object.entries(grouped).map(([cat, list]) => {
+      {Array.from(grouped.entries()).map(([cat, list]) => {
         if (list.length === 0) return null;
         const confirmed = list.filter((i) => i.status === "confirmed" || i.status === "accepted").length;
         return (
           <section key={cat} className="bg-white border border-ink-200 rounded-2xl shadow-card overflow-hidden">
             <header className="flex items-center justify-between gap-3 px-5 py-4 border-b border-ink-200">
-              <h3 className="font-bold text-ink-900">{SECTION_LABELS[cat as TechCategory]} ({list.length})</h3>
+              <h3 className="font-bold text-ink-900">{labelFor(cat)} ({list.length})</h3>
               <span className="text-xs text-ink-500 tabular-nums">{confirmed}/{list.length} bevestigd</span>
             </header>
             <ul className="divide-y divide-ink-200">
@@ -57,17 +65,40 @@ function ItemRow({ item }: { item: AdvancingTechItem }) {
   const [showAltForm, setShowAltForm] = useState(false);
   const [altText, setAltText] = useState(item.alternative_description ?? "");
 
-  const tone = STATUS_TONE_PILL[item.status];
+  // Optimistic state — UI reageert direct, server-roundtrip op de achtergrond.
+  const [localStatus, setLocalStatus] = useState<TechItemStatus>(item.status);
+  const [localAlt, setLocalAlt] = useState<string | undefined>(item.alternative_description);
+
+  // Server-state overschrijft local zodra die binnen is (na router.refresh).
+  if (item.status !== localStatus && !pending) {
+    // sync uit prop wanneer een externe wijziging (bv. realtime) binnenkomt
+    // alleen syncen als we niet zelf bezig zijn.
+    queueMicrotask(() => {
+      setLocalStatus(item.status);
+      setLocalAlt(item.alternative_description);
+    });
+  }
+
+  const tone = STATUS_TONE_PILL[localStatus];
 
   function handleStatus(status: TechItemStatus, alternative?: string) {
+    // 1) Direct UI updaten
+    setLocalStatus(status);
+    if (alternative !== undefined) setLocalAlt(alternative);
+    setShowAltForm(false);
+
+    // 2) Server in achtergrond. Bij fout: revert.
     startTransition(async () => {
-      await setTechItemStatusAction(item.id, {
+      const r = await setTechItemStatusAction(item.id, {
         status,
         alternative_description: alternative,
       });
-      setShowAltForm(false);
-      // Forceer hydratie van de server-component zodat de pill + counts updaten.
-      router.refresh();
+      if (!r?.ok) {
+        setLocalStatus(item.status);
+        setLocalAlt(item.alternative_description);
+      } else {
+        router.refresh();
+      }
     });
   }
 
@@ -83,22 +114,21 @@ function ItemRow({ item }: { item: AdvancingTechItem }) {
             {item.is_mandatory && <span className="text-[10px] font-bold uppercase text-red-600">mandatory</span>}
           </div>
           {item.artist_notes && <p className="text-xs text-ink-500 mt-0.5 italic">Artist note: {item.artist_notes}</p>}
-          {item.alternative_description && (
-            <p className="text-xs text-amber-700 mt-0.5">↳ Alt: {item.alternative_description}</p>
+          {localAlt && (
+            <p className="text-xs text-amber-700 mt-0.5">↳ Alt: {localAlt}</p>
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {STATUS_BUTTONS.map((btn) => {
             const isActive =
-              btn.status === item.status ||
-              (btn.status === "confirmed" && item.status === "accepted");
-            const anyChosen = item.status !== "requested";
+              btn.status === localStatus ||
+              (btn.status === "confirmed" && localStatus === "accepted");
+            const anyChosen = localStatus !== "requested";
             const dim = anyChosen && !isActive;
             return (
               <button
                 key={btn.status}
                 type="button"
-                disabled={pending}
                 onClick={() => {
                   if (btn.status === "alternative_offered") {
                     setShowAltForm(true);
@@ -106,7 +136,7 @@ function ItemRow({ item }: { item: AdvancingTechItem }) {
                     handleStatus(btn.status);
                   }
                 }}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 whitespace-nowrap ${btn.tone} ${dim ? "opacity-20 hover:opacity-100" : ""}`}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-md transition whitespace-nowrap ${btn.tone} ${dim ? "opacity-20 hover:opacity-100" : ""}`}
               >
                 {btn.label}
               </button>

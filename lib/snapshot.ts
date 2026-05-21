@@ -13,6 +13,7 @@ import type {
   ArtistCrew,
   ArtistRiderTemplate,
   ArtistTechRequirement,
+  ArtistCustomTechCategory,
   Booking,
   BookingCrew,
   ContactPerson,
@@ -44,6 +45,7 @@ export interface Snapshot {
   artistCrew: ArtistCrew[];
   artistRiderTemplates: ArtistRiderTemplate[];
   artistTechRequirements: ArtistTechRequirement[];
+  artistCustomTechCategories: ArtistCustomTechCategory[];
   festivals: Festival[];
   stages: Stage[];
   festivalCrmContacts: FestivalCRMContact[];
@@ -119,7 +121,7 @@ export const loadSnapshot = cache(async (): Promise<Snapshot> => {
   const client = supabaseService();
 
   const [
-    orgsR, artistsR, artistCrewR, artistRiderTemplatesR, artistTechRequirementsR,
+    orgsR, artistsR, artistCrewR, artistRiderTemplatesR, artistTechRequirementsR, artistCustomTechCategoriesR,
     festivalsR, stagesR, bookingsR, bookingCrewR,
     advancingsR, sectionsR, techItemsR, signedRidersR, activityR,
     hotelR, travelR, logisticsR, hospitalityR, visaR, visaCrewR, distancesR,
@@ -134,6 +136,7 @@ export const loadSnapshot = cache(async (): Promise<Snapshot> => {
     client.from("artist_crew").select("*"),
     client.from("artist_rider_templates").select("*"),
     client.from("artist_tech_requirements").select("*").order("sort_order", { ascending: true }),
+    client.from("artist_custom_tech_categories").select("*").order("sort_order", { ascending: true }),
     client.from("festivals").select("*"),
     client.from("stages").select("*"),
     client.from("bookings").select("*"),
@@ -168,7 +171,7 @@ export const loadSnapshot = cache(async (): Promise<Snapshot> => {
   ]);
 
   const checked = [
-    orgsR, artistsR, artistCrewR, artistRiderTemplatesR, artistTechRequirementsR,
+    orgsR, artistsR, artistCrewR, artistRiderTemplatesR, artistTechRequirementsR, artistCustomTechCategoriesR,
     festivalsR, stagesR, bookingsR, bookingCrewR,
     advancingsR, sectionsR, techItemsR, signedRidersR, activityR,
     hotelR, travelR, logisticsR, hospitalityR, visaR, visaCrewR, distancesR,
@@ -239,6 +242,14 @@ export const loadSnapshot = cache(async (): Promise<Snapshot> => {
     item_description: r.item_description,
     is_mandatory: r.is_mandatory ?? false,
     notes: r.notes ?? undefined,
+    sort_order: r.sort_order ?? 0,
+  }));
+
+  const artistCustomTechCategories: ArtistCustomTechCategory[] = (artistCustomTechCategoriesR.data ?? []).map((r: any) => ({
+    id: r.id,
+    artist_id: r.artist_id,
+    key: r.key,
+    label: r.label,
     sort_order: r.sort_order ?? 0,
   }));
 
@@ -702,6 +713,7 @@ export const loadSnapshot = cache(async (): Promise<Snapshot> => {
     artistCrew,
     artistRiderTemplates,
     artistTechRequirements,
+    artistCustomTechCategories,
     festivals,
     stages,
     festivalCrmContacts,

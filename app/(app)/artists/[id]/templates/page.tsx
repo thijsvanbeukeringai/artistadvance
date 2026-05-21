@@ -86,7 +86,11 @@ export default async function ArtistTemplatesPage({ params }: { params: { id: st
       <RiderImporter artistId={artist.id} />
 
       {/* Tech requirements editor */}
-      <TechRequirementsEditor artistId={artist.id} requirements={techReqs} />
+      <TechRequirementsEditor
+        artistId={artist.id}
+        requirements={techReqs}
+        customCategories={snap.artistCustomTechCategories.filter((c) => c.artist_id === artist.id)}
+      />
     </div>
   );
 }

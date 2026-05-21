@@ -81,6 +81,8 @@ import {
   setArtistIntakeSettings,
   acceptBookingIntake,
   declineBookingIntake,
+  addArtistCustomTechCategory,
+  removeArtistCustomTechCategory,
 } from "./db";
 import { readAccount } from "./account";
 import { loadSnapshot } from "./snapshot";
@@ -1734,5 +1736,38 @@ export async function declineIntakeAction(intakeId: string, artistId: string) {
   if (!az.ok) return { ok: false as const, error: az.error };
   await declineBookingIntake(intakeId);
   revalidatePath(`/artists/${artistId}/intakes`);
+  return { ok: true as const };
+}
+
+// ============================================================================
+// Custom tech-categorieen per artist
+// ============================================================================
+
+export async function addCustomTechCategoryAction(artistId: string, label: string) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  const trimmed = label.trim();
+  if (!trimmed) return { ok: false as const, error: "Naam vereist" };
+  const key = trimmed
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+  if (!key) return { ok: false as const, error: "Ongeldige naam" };
+  try {
+    await addArtistCustomTechCategory(artistId, key, trimmed);
+  } catch (e: any) {
+    return { ok: false as const, error: e?.message ?? "Toevoegen faalde" };
+  }
+  revalidatePath(`/artists/${artistId}/templates`);
+  return { ok: true as const, key };
+}
+
+export async function removeCustomTechCategoryAction(artistId: string, id: string) {
+  const az = await requireArtistAccess(artistId);
+  if (!az.ok) return { ok: false as const, error: az.error };
+  await removeArtistCustomTechCategory(id);
+  revalidatePath(`/artists/${artistId}/templates`);
   return { ok: true as const };
 }
