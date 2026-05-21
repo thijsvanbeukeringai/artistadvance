@@ -6,6 +6,7 @@ import ArtistFilter from "@/components/filters/ArtistFilter";
 import { SHOW_TYPE_LABELS } from "@/lib/data";
 import { readAccount, scopedArtistIds } from "@/lib/account";
 import { loadSnapshot } from "@/lib/snapshot";
+import LiveSync from "@/components/realtime/LiveSync";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +40,11 @@ export default async function BookingsPage({ searchParams }: { searchParams: { a
       return { booking: b, artist, festival, stage };
     });
 
+  const liveArtistIds = Array.from(visibleIds).slice(0, 50);
+
   return (
     <div className="space-y-6">
+      {liveArtistIds.length > 0 && <LiveSync scope={{ mode: "artist", ids: liveArtistIds }} debounce={500} />}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-extrabold text-ink-900">

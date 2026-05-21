@@ -4,6 +4,7 @@ import { SHOW_TYPE_LABELS } from "@/lib/data";
 import { computeReadiness } from "@/lib/readiness";
 import { readAccount, canAccessAdvancing, type AccountRole } from "@/lib/account";
 import { loadSnapshot, type Snapshot } from "@/lib/snapshot";
+import LiveSync from "@/components/realtime/LiveSync";
 import MonthCalendar from "@/components/calendar/MonthCalendar";
 import AgencyCalendar from "@/components/calendar/AgencyCalendar";
 import { buildCalendarEvents } from "@/lib/calendarEvents";
@@ -67,8 +68,11 @@ function AgencyDashboard({ snap, scopedArtistIds, allScopedIds, accountLabel, ro
   const calendarEvents = buildCalendarEvents(snap, scopedArtistIds);
   const artistOptions = artists.map((a) => ({ id: a.id, name: a.name }));
 
+  const liveArtistIds = artistOptions.map((a) => a.id).slice(0, 50);
+
   return (
     <div className="space-y-6">
+      {liveArtistIds.length > 0 && <LiveSync scope={{ mode: "artist", ids: liveArtistIds }} debounce={500} />}
       {/* Top header */}
       <section className="bg-white border border-ink-200 rounded-2xl shadow-card p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">

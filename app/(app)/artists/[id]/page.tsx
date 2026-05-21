@@ -9,6 +9,7 @@ import { buildCalendarEvents } from "@/lib/calendarEvents";
 import { SHOW_TYPE_LABELS } from "@/lib/data";
 import { loadSnapshot } from "@/lib/snapshot";
 import { readAccount, canAccessAdvancing } from "@/lib/account";
+import LiveSync from "@/components/realtime/LiveSync";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,7 @@ export default async function ArtistDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="space-y-6">
+      <LiveSync scope={{ mode: "artist", ids: [artist.id] }} />
       {/* breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-ink-400">
         <Link href="/artists" className="hover:text-ink-700">Artists</Link>

@@ -6,6 +6,7 @@ import RiderImporter from "@/components/templates/RiderImporter";
 import PageIntro from "@/components/PageIntro";
 import type { ShowType } from "@/lib/types";
 import { loadSnapshot } from "@/lib/snapshot";
+import LiveSync from "@/components/realtime/LiveSync";
 
 const SHOW_TYPES: ShowType[] = ["festival", "club", "full_production", "ldjv", "venue", "corporate", "private"];
 const RIDER_TYPES: ("technical" | "hospitality" | "sfx_pyro")[] = ["technical", "hospitality", "sfx_pyro"];
@@ -20,6 +21,7 @@ export default async function ArtistTemplatesPage({ params }: { params: { id: st
 
   return (
     <div className="space-y-6">
+      <LiveSync scope={{ mode: "artist", ids: [artist.id] }} />
       <div className="flex items-center gap-2 text-xs text-ink-400">
         <Link href="/artists" className="hover:text-ink-700">Artists</Link>
         <span>/</span>

@@ -6,6 +6,7 @@ import { computeReadiness } from "@/lib/readiness";
 import StatusPill, { humanStatus, statusTone } from "@/components/StatusPill";
 import { readAccount, scopedArtistIds, canAccessAdvancing } from "@/lib/account";
 import { loadSnapshot } from "@/lib/snapshot";
+import LiveSync from "@/components/realtime/LiveSync";
 import AdvancingsFilters from "@/components/advancing/AdvancingsFilters";
 
 const MONTHS_NL = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
@@ -73,8 +74,13 @@ export default async function AdvancingsPage({ searchParams }: { searchParams: {
 
   const showArtistFilter = artistOpts.length > 1;
 
+  const liveArtistIds = Array.from(visibleIds).slice(0, 50);
+  const liveAdvancingIds = allRows.map((r) => r.adv.id).slice(0, 50);
+
   return (
     <div className="space-y-6">
+      {liveAdvancingIds.length > 0 && <LiveSync scope={{ mode: "advancing", ids: liveAdvancingIds }} debounce={500} />}
+      {liveArtistIds.length > 0 && <LiveSync scope={{ mode: "artist", ids: liveArtistIds }} debounce={500} />}
       <PageIntro
         eyebrow="Advancings"
         title="Alle lopende voorbereidingen"

@@ -15,6 +15,7 @@ import IntakeLinkEditor from "@/components/artistSettings/IntakeLinkEditor";
 import IntakeInbox from "@/components/artistSettings/IntakeInbox";
 import { supabaseService } from "@/lib/supabase-service";
 import type { BookingIntake } from "@/lib/types";
+import LiveSync from "@/components/realtime/LiveSync";
 import StatusPill, { humanStatus } from "@/components/StatusPill";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,7 @@ export default async function ArtistSettingsPage({ params }: { params: { id: str
 
   return (
     <div className="space-y-6">
+      <LiveSync scope={{ mode: "artist", ids: [artist.id] }} />
       {/* Breadcrumb + header */}
       <div className="flex items-center gap-2 text-xs text-ink-400">
         <Link href="/artists" className="hover:text-ink-700">Artists</Link>
